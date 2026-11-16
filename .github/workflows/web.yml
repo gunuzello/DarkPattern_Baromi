@@ -25,4 +25,6 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm run typecheck
-      - run: npm run build
+      # Turbopack's Google Font virtual module is unavailable in GitHub's runner.
+      # Use Webpack in CI; Vercel's own build remains managed by the Vercel project.
+      - run: npm run build -- --webpack
