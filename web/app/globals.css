@@ -31,7 +31,9 @@
   /* brand */
   --brand: #4f6bff;
   --brand-violet: #8a5cff;
-  --brand-gradient: linear-gradient(115deg, #4f6bff 0%, #8a5cff 100%);
+  /* one step darker than the brand board gradient so white button text passes 4.5:1
+     (#3f57e6 5.65:1, #7646e8 5.51:1); --baromi-primary-gradient keeps the board colors */
+  --brand-gradient: linear-gradient(115deg, #3f57e6 0%, #7646e8 100%);
   --link: #3346d3;
   --link-hover: #2536b0;
   --tint: #eef1ff;
@@ -1662,7 +1664,8 @@ code,
   border-bottom: 1px solid var(--line);
 }
 .lp-section {
-  padding: 120px 0;
+  /* block padding only: a shorthand here used to wipe .lp-wrap side padding (32px shift) */
+  padding-block: 120px;
   display: flex;
   flex-direction: column;
   gap: 48px;
@@ -1762,11 +1765,11 @@ code,
   border-left: 1px solid var(--line);
 }
 .lp-closing {
-  background: var(--brand-gradient);
+  background: var(--baromi-navy);
   color: #fff;
 }
 .lp-closing__inner {
-  padding: 120px 32px;
+  padding-block: 120px;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -1776,7 +1779,7 @@ code,
 .lp-closing p {
   font-size: 17px;
   line-height: 1.65;
-  color: rgba(255, 255, 255, 0.88);
+  color: #fff;
 }
 .lp-footer {
   padding: 48px 32px 56px;
@@ -1797,12 +1800,9 @@ code,
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
+  /* Phones: hero text first; the sticky panel is replaced by inline illustrations. */
   .story__stage {
-    position: relative;
-    top: 0;
-    height: 520px;
-    order: -1;
-    margin-top: 24px;
+    display: none;
   }
   .story__hero {
     min-height: 0;
@@ -1827,7 +1827,7 @@ code,
     border-top: 1px solid var(--line);
   }
   .lp-section {
-    padding: 72px 0;
+    padding-block: 72px;
   }
   .bars__row {
     grid-template-columns: 72px minmax(0, 1fr) 80px;

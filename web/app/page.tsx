@@ -4,6 +4,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Stat } from "@/components/ui/Stat";
 import { rules } from "@/lib/labels";
+import { WaitlistForm } from "@/components/landing/WaitlistForm";
 
 const promises: { icon: IconName; title: string; body: string }[] = [
   { icon: "check", title: "근거 없이 단정하지 않아요", body: "결과는 법률 판단이 아니라 가이드라인 기준의 위험 신호이고, 모든 결과에 증거를 연결해요." },
@@ -25,8 +26,9 @@ function Bar({ label, amount, width, parts }: { label: string; amount: string; w
 export default function Home() {
   const hero = (
     <div id="top" className="story__hero">
+      <p className="eyebrow" style={{ marginBottom: -8 }}>쇼핑몰 운영자를 위한 다크패턴 진단</p>
       <h1 className="t-display">주문서까지<br />대신 눌러봐요.</h1>
-      <p className="story__lede">바로미가 공개 화면부터 상품 상세, 장바구니, 주문서까지 실제 구매 흐름을 따라가며 16가지 다크패턴 위험 신호를 근거와 함께 정리해요.</p>
+      <p className="story__lede">쇼핑몰 운영자를 대신해 바로미가 공개 화면부터 상품 상세, 장바구니, 주문서까지 실제 구매 흐름을 따라가고, 16가지 다크패턴 위험 신호를 근거와 함께 정리해요.</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         <ButtonLink href="/scan/new" variant="brand" size="lg">무료로 진단하기</ButtonLink>
         <ButtonLink href="/report/sample" variant="secondary" size="lg">예시 보고서 보기</ButtonLink>
@@ -56,10 +58,13 @@ export default function Home() {
             <div className="panel" style={{ borderRadius: 16, overflow: "hidden" }}>
               <div style={{ padding: "32px 40px", borderBottom: "1px solid var(--line)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span className="t-caption">linen-house.cafe24.com, 데일리 린넨 셔츠</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className="sample-badge">예시</span>
+                    <span className="t-caption">linen-house.cafe24.com, 데일리 린넨 셔츠</span>
+                  </span>
                   <span style={{ fontSize: 28, lineHeight: 1.25, letterSpacing: "-0.02em", fontWeight: 700 }}>위험 신호 3건, 검토 필요 2건이 있어요</span>
                 </div>
-                <ButtonLink href="/report/sample">예시 보고서 열기</ButtonLink>
+                <ButtonLink href="/report/sample" variant="secondary">예시 보고서 열기</ButtonLink>
               </div>
               <div className="kpi-row">
                 <div><Stat label="위험 신호" value="3" sub="규칙과 증거로 확인" kind="risk" /></div>
@@ -133,20 +138,23 @@ export default function Home() {
           <div className="lp-wrap lp-section">
             <div className="lp-section__head">
               <h2 id="pricing-title" className="t-section">요금제</h2>
-              <p>정식 요금제는 실제 쇼핑몰 평가를 마친 뒤 안내해요.</p>
+              <p>출시 전에는 무료로 진단할 수 있어요. 정식 요금은 실제 쇼핑몰 평가를 마친 뒤 안내해요.</p>
             </div>
             <div className="duo">
               <div>
-                <span style={{ fontSize: 18, fontWeight: 700 }}>무료 진단</span>
-                <span style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>무료</span>
-                <p className="muted">[제공 범위 확정 전] 기본 엔진으로 16가지 항목을 진단하고 근거가 연결된 보고서를 받아보세요.</p>
-                <div style={{ marginTop: "auto" }}><ButtonLink href="/scan/new">무료로 진단하기</ButtonLink></div>
+                <span style={{ fontSize: 18, fontWeight: 700 }}>기본 진단</span>
+                <span style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>출시 전 무료</span>
+                <p className="muted">기본 엔진으로 16가지 항목을 진단하고, 근거가 연결된 보고서를 받아보세요. 정식 요금은 평가 후 안내해요.</p>
+                <div style={{ marginTop: "auto" }}><ButtonLink href="/scan/new" variant="brand">무료로 진단하기</ButtonLink></div>
               </div>
               <div>
-                <span style={{ fontSize: 18, fontWeight: 700 }}>AI 정밀 분석</span>
-                <span className="faint" style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>[가격 미정]</span>
-                <p className="muted">기본 보고서의 검토 필요 후보만 별도로 분석하는 유료 후속 기능이에요. 기존 증거와 판정은 덮어쓰지 않아요.</p>
-                <div style={{ marginTop: "auto" }}><ButtonLink href="mailto:hello@baromi.app" variant="secondary" external>출시 소식 받기</ButtonLink></div>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>AI 정밀 분석</span>
+                  <span className="soon-badge">준비 중</span>
+                </span>
+                <span className="faint" style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>유료 예정</span>
+                <p className="muted">기본 보고서의 검토 필요 후보만 별도로 분석하는 후속 기능이에요. 기존 증거와 판정은 덮어쓰지 않아요. 요금은 출시할 때 안내해요.</p>
+                <div style={{ marginTop: "auto" }}><WaitlistForm /></div>
               </div>
             </div>
           </div>
@@ -159,7 +167,7 @@ export default function Home() {
             <h2 id="closing-title" style={{ fontSize: "clamp(40px, 5vw, 56px)", lineHeight: 1.08, letterSpacing: "-0.04em", fontWeight: 800 }}>쇼핑몰을<br />더 바르게.</h2>
             <p>주소만 넣으면 오늘 바로 첫 보고서를 받아볼 수 있어요.</p>
           </div>
-          <ButtonLink href="/scan/new" variant="inverse" size="lg">무료로 진단하기</ButtonLink>
+          <ButtonLink href="/scan/new" variant="brand" size="lg">무료로 진단하기</ButtonLink>
         </div>
       </section>
 

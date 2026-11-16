@@ -786,3 +786,88 @@
 a:hover .logo__word {
   color: var(--baromi-navy);
 }
+
+/* ---------- landing review fixes ---------- */
+/* Inline illustrations exist only on phones (see the 900px rule in globals.css). */
+.story__inline-model {
+  display: none;
+  position: relative;
+  height: 280px;
+  margin: 8px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-feature);
+  background: radial-gradient(ellipse 70% 60% at 50% 42%, #ffffff 0%, #f1f2f4 72%);
+  overflow: hidden;
+}
+.story__inline-screen {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-feature);
+  background: var(--canvas);
+  min-width: 0;
+}
+.story__inline-screen .browser__body {
+  padding: 16px;
+  overflow-x: auto;
+}
+.sample-badge,
+.soon-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.sample-badge {
+  background: var(--baromi-lavender);
+  color: var(--link);
+}
+.soon-badge {
+  background: var(--surface-sub);
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.waitlist {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.waitlist .field {
+  flex: 1 1 220px !important;
+}
+.waitlist .input {
+  width: 100%;
+}
+.waitlist__note {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.waitlist__note--error {
+  color: var(--risk-ink);
+}
+.waitlist__done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--clear-ink);
+}
+@media (max-width: 900px) {
+  .story__inline-model {
+    display: block;
+  }
+  .story__inline-screen {
+    display: flex;
+  }
+}

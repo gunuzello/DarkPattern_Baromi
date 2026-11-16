@@ -42,6 +42,10 @@ export function Story({ hero }: { hero: ReactNode }) {
     <section id="how" aria-label="바로미가 구매 흐름을 진단하는 방법" className="lp-wrap story">
       <div>
         {hero}
+        {/* Phones: the sticky panel is hidden, so the model sits under the hero at half height. */}
+        <div className="story__inline-model" aria-hidden="true">
+          <StackModel />
+        </div>
         {steps.map((step, index) => (
           <article key={step.no} ref={(element) => { refs.current[index] = element; }} data-step={index} className="story__step">
             <span className="story__step-no tnum">{step.no} {step.stage}</span>
@@ -54,6 +58,12 @@ export function Story({ hero }: { hero: ReactNode }) {
               </ul>
             </div>
             {step.badge ? <div>{step.badge}</div> : null}
+            {/* Phones: the screen for this step, right under its text. */}
+            {stageScreens[index] ? (
+              <div className="story__inline-screen" aria-label={`${stageScreens[index].label} 화면 예시`} role="group">
+                {stageScreens[index].node}
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
