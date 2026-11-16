@@ -2,9 +2,7 @@ import { SiteFooter, SiteHeader } from "@/components/site/SiteChrome";
 import { Story } from "@/components/landing/Story";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import Link from "next/link";
-import { Mark, plainLabels, VerdictBadge } from "@/components/ui/Status";
-import { ResultRing } from "@/components/report/ResultRing";
+import { Mark, plainLabels } from "@/components/ui/Status";
 import { reportItems } from "@/components/report/model";
 import { sampleReport } from "@/lib/demo";
 import { rules } from "@/lib/labels";
@@ -56,55 +54,35 @@ export default function Home() {
             </div>
             <div className="panel lp-result">
               <div className="lp-result__head">
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div className="rv-summary__chips">
-                    <span className="rv-chip rv-chip--state"><span className="rv-dot" />점검 완료</span>
-                    <span className="rv-chip">무료 기본 점검</span>
-                    <span className="rv-chip rv-chip--brand">예시</span>
-                  </div>
-                  <span className="lp-result__title">쇼핑몰 점검 결과</span>
-                  <span className="rv-summary__site">점검한 쇼핑몰 <b>linen-house.cafe24.com</b></span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className="sample-badge">예시</span>
+                    <span className="t-caption">linen-house.cafe24.com, 데일리 린넨 셔츠</span>
+                  </span>
+                  <span className="lp-result__title">16가지 중 고쳐야 할 곳 {sampleCount("risk")}곳, 확인할 곳 {sampleCount("review")}곳이 있어요</span>
                 </div>
                 <ButtonLink href="/report/sample" variant="secondary">예시 결과 열기</ButtonLink>
               </div>
 
               <div className="lp-result__body">
-                <div className="lp-result__summary">
-                  <ResultRing results={sampleItems} />
-                  <div className="rv-summary__text">
-                    <span className="rv-summary__headline">16가지 중 고쳐야 할 곳 {sampleCount("risk")}곳, 확인할 곳 {sampleCount("review")}곳이 있어요</span>
-                    <p className="rv-summary__note">점검 못 한 {sampleCount("none")}가지는 이유와 예방 방법을 함께 알려드려요. ‘괜찮아요’는 점검한 범위에서 문제가 안 보였다는 뜻이고, 법적으로 문제없다는 보증은 아니에요.</p>
-                    <ul className="rv-counts">
-                      {(["risk", "review", "none", "clear"] as const).map((kind) => (
-                        <li key={kind} className="rv-count" style={{ cursor: "default" }}>
-                          <span className={`rv-count__num rv-count__num--${kind} tnum`}>{sampleCount(kind)}</span>
-                          <span className="rv-count__label"><Mark kind={kind} />{plainLabels[kind]}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="rv-list lp-result__list">
-                  {(["risk", "review"] as const).map((kind) => (
-                    <section key={kind} className={`rv-group rv-group--${kind}`} aria-label={plainLabels[kind]}>
-                      <div className="rv-group__head"><span className="rv-group__title"><VerdictBadge kind={kind} />{plainLabels[kind]}</span></div>
-                      <ul className="rv-rows">
-                        {sampleItems.filter((item) => item.kind === kind).map((item) => (
-                          <li key={item.type}>
-                            <Link href="/report/sample" className="rv-row">
-                              <span className="rv-row__no tnum">{item.no}</span>
-                              <span className="rv-row__text">
-                                <span className="rv-row__title">{item.plain}</span>
-                                <span className="rv-row__summary">{item.summary}</span>
-                              </span>
-                              <Icon name="chevron" size={16} color="var(--ink-3)" />
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
+                <ul className="lp-result__counts">
+                  {(["risk", "review", "none", "clear"] as const).map((kind) => (
+                    <li key={kind}>
+                      <span className={`lp-result__num rv-count__num--${kind} tnum`}>{sampleCount(kind)}</span>
+                      <span className="lp-result__label"><Mark kind={kind} />{plainLabels[kind]}</span>
+                    </li>
                   ))}
+                </ul>
+                <div className="lp-result__fix">
+                  <span className="lp-result__fix-title">먼저 고칠 곳</span>
+                  <ol>
+                    {sampleItems.filter((item) => item.kind === "risk").map((item) => (
+                      <li key={item.type}>
+                        <b>{item.plain}</b>
+                        <span>{item.summary}</span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               </div>
 
@@ -173,11 +151,11 @@ export default function Home() {
               </div>
               <div>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 18, fontWeight: 700 }}>AI 정밀 분석</span>
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>AI 정밀 점검</span>
                   <span className="soon-badge">준비 중</span>
                 </span>
                 <span className="faint" style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>유료 예정</span>
-                <p className="muted">기본 보고서의 검토 필요 후보만 별도로 분석하는 후속 기능이에요. 기존 증거와 판정은 덮어쓰지 않아요. 요금은 출시할 때 안내해요.</p>
+                <p className="muted">점검 결과에서 원하는 항목을 골라 AI가 위험·부분적 안전·안전으로 한 번 더 판단해요. 기본 점검 결과는 덮어쓰지 않아요. 요금은 출시할 때 안내해요.</p>
                 <div style={{ marginTop: "auto" }}><WaitlistForm /></div>
               </div>
             </div>
