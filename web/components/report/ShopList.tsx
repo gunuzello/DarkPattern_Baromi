@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { hostOf } from "@/lib/format";
-import { useBackToRegistration } from "@/lib/session";
+import { useBackToLogin } from "@/lib/session";
 import type { ShopListResponse } from "@/lib/types";
 
 type ShopRow = ShopListResponse["shops"][number];
@@ -24,7 +24,7 @@ export function ShopList() {
   const [removing, setRemoving] = useState<ShopRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [removeError, setRemoveError] = useState("");
-  const backToRegistration = useBackToRegistration();
+  const backToLogin = useBackToLogin();
 
   useEffect(() => {
     let alive = true;
@@ -33,11 +33,11 @@ export function ShopList() {
       .then((result) => { if (alive) setShops(result.shops); })
       .catch((cause) => {
         if (!alive) return;
-        if (cause instanceof ApiError && cause.sessionLost) backToRegistration();
+        if (cause instanceof ApiError && cause.sessionLost) backToLogin();
         else setError(errorMessage(cause, "쇼핑몰 목록을 불러오지 못했어요."));
       });
     return () => { alive = false; };
-  }, [attempt, backToRegistration]);
+  }, [attempt, backToLogin]);
 
   async function remove() {
     if (!removing) return;
@@ -46,10 +46,10 @@ export function ShopList() {
     try {
       await api.deleteShop(removing.shopId);
       setShops((current) => current?.filter((shop) => shop.shopId !== removing.shopId));
-      toast.show("쇼핑몰과 진단 이력을 삭제했어요");
+      toast.show("쇼핑몰과 점검 기록을 삭제했어요");
       setRemoving(null);
     } catch (cause) {
-      if (cause instanceof ApiError && cause.sessionLost) backToRegistration();
+      if (cause instanceof ApiError && cause.sessionLost) backToLogin();
       else setRemoveError(errorMessage(cause, "쇼핑몰을 삭제하지 못했어요."));
     } finally {
       setBusy(false);
@@ -60,8 +60,8 @@ export function ShopList() {
     <>
       <PageHead
         title="내 쇼핑몰"
-        meta={<span>계정에 등록한 쇼핑몰이에요. 쇼핑몰을 고르면 진단 이력을 볼 수 있어요.</span>}
-        actions={<ButtonLink href="/scan/new" icon="plus">새 진단</ButtonLink>}
+        meta={<span>계정에 등록한 쇼핑몰이에요. 쇼핑몰을 고르면 점검 기록을 볼 수 있어요.</span>}
+        actions={<ButtonLink href="/scan/new" icon="plus">새 점검</ButtonLink>}
       />
       {error ? (
         <Alert kind="error" title="쇼핑몰 목록을 불러오지 못했어요" actions={<Button variant="secondary" size="sm" icon="refresh" onClick={() => setAttempt((n) => n + 1)}>다시 불러오기</Button>}>{error}</Alert>
@@ -72,27 +72,32 @@ export function ShopList() {
       ) : !shops.length ? (
         <section className="panel" style={{ padding: 32, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
           <h2 className="t-title" style={{ fontSize: 20 }}>첫 쇼핑몰을 등록해 주세요</h2>
-          <p className="muted">주소를 등록하면 구매 흐름 진단을 시작할 수 있어요.</p>
-          <ButtonLink href="/scan/new" icon="plus">쇼핑몰 등록하고 진단하기</ButtonLink>
+          <p className="muted">주소를 등록하면 구매 흐름 점검을 시작할 수 있어요.</p>
+          <ButtonLink href="/scan/new" icon="plus">쇼핑몰 등록하고 점검하기</ButtonLink>
         </section>
       ) : (
-        <ul className="panel" style={{ listStyle: "none", margin: 0, padding: 0, overflow: "hidden" }}>
-          {shops.map((shop, index) => (
-            <li key={shop.shopId} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, padding: "18px 24px", borderTop: index ? "1px solid var(--line)" : 0 }}>
-              <Icon name="shop" color="var(--ink-2)" />
-              <span style={{ flex: "1 1 240px", minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                <Link href={`/shop/${encodeURIComponent(shop.shopId)}`} style={{ color: "var(--ink)", fontSize: 16, fontWeight: 700, textDecoration: "none" }}>{hostOf(shop.url)}</Link>
-                <span className="faint" style={{ fontSize: 13, overflowWrap: "anywhere" }}>{shop.url}</span>
-              </span>
-              <ButtonLink variant="secondary" size="sm" href={`/shop/${encodeURIComponent(shop.shopId)}`}>진단 이력</ButtonLink>
-              <Button variant="tertiary" size="sm" onClick={() => { setRemoveError(""); setRemoving(shop); }} aria-label={`${hostOf(shop.url)} 삭제`}>삭제</Button>
+        <ul className="shop-cards">
+          {shops.map((shop) => (
+            <li key={shop.shopId} className="shop-card">
+              <Link href={`/shop/${encodeURIComponent(shop.shopId)}`} className="shop-card__main">
+                <span className="shop-card__icon" aria-hidden><Icon name="shop" size={20} /></span>
+                <span className="shop-card__text">
+                  <b>{hostOf(shop.url)}</b>
+                  <span>{shop.url}</span>
+                </span>
+                <Icon name="chevron" size={16} color="var(--ink-3)" />
+              </Link>
+              <div className="shop-card__foot">
+                <ButtonLink variant="secondary" size="sm" href={`/shop/${encodeURIComponent(shop.shopId)}`}>점검 기록 보기</ButtonLink>
+                <Button variant="tertiary" size="sm" onClick={() => { setRemoveError(""); setRemoving(shop); }} aria-label={`${hostOf(shop.url)} 삭제`}>삭제</Button>
+              </div>
             </li>
           ))}
         </ul>
       )}
       {removing ? (
         <ConfirmDialog title="쇼핑몰을 삭제할까요?" confirmLabel="쇼핑몰 삭제" onCancel={() => setRemoving(null)} onConfirm={remove} busy={busy}>
-          <p>{hostOf(removing.url)}의 진단 이력과 증거 이미지도 함께 지워져요. 되돌릴 수 없어요.</p>
+          <p>{hostOf(removing.url)}의 점검 기록과 확인 화면도 함께 지워져요. 되돌릴 수 없어요.</p>
           {removeError ? <p style={{ marginTop: 8, color: "var(--risk-ink)" }}>{removeError}</p> : null}
         </ConfirmDialog>
       ) : null}

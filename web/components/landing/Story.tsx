@@ -39,7 +39,7 @@ export function Story({ hero }: { hero: ReactNode }) {
   const caption = active < 0 ? "아래로 스크롤하면 단계별 화면을 보여드려요" : `지금 보는 화면: ${stageScreens[active].label}`;
 
   return (
-    <section id="how" aria-label="바로미가 구매 흐름을 진단하는 방법" className="lp-wrap story">
+    <section id="how" aria-label="바로미가 구매 흐름을 점검하는 방법" className="lp-wrap story">
       <div>
         {hero}
         {/* Phones: the sticky panel is hidden, so the model sits under the hero at half height. */}

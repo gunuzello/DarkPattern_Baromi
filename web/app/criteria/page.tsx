@@ -21,8 +21,8 @@ export default function CriteriaPage() {
                 <tr key={rule.type}>
                   <td className="tnum faint">{String(index + 1).padStart(2, "0")}</td>
                   <td>
-                    <span style={{ display: "block", fontWeight: 700 }}>{rule.title}</span>
-                    <span className="faint" style={{ fontSize: 13 }}>{guide[rule.type].plain}</span>
+                    <span style={{ display: "block", fontWeight: 700 }}>{guide[rule.type].plain}</span>
+                    <span className="faint" style={{ fontSize: 13 }}>{rule.title}</span>
                   </td>
                   <td>{guide[rule.type].evidence}</td>
                   <td className="muted">{guide[rule.type].limit}</td>

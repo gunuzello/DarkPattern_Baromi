@@ -143,7 +143,7 @@ export async function getScan(scanId: string): Promise<ScanState> {
     surfaceCoverage: Object.fromEntries(surfaceAt.map(([kind, at]) => [kind,
       !dynamic ? "SKIPPED" : t >= at ? doneSurfaces[kind] : active ? "PENDING" : "NOT_FOUND"])) as Record<SurfaceKind, SurfaceStatus>,
     phaseResults,
-    ruleCoverage: active ? null : undefined,
+    ruleCoverage: active || cancelled ? null : dynamic ? sampleRuleCoverage : undefined,
     hasReport: !active && !cancelled,
     summary: {
       suspected: (reached(11) ? 1 : 0) + (reached(19) ? 1 : 0) + (reached(12) ? 1 : 0),
@@ -292,11 +292,12 @@ export async function requestAiReview(_scanId: string) {
 export async function getFinding(findingId: string): Promise<FindingDetail> {
   await wait(300);
   const finding = sampleReport.findings.find((f) => String(f.id) === findingId) ?? sampleReport.findings[0];
+  const own = sampleEvidenceLines[finding.id];
   return {
-    id: finding.id, scanId: "sample", type: finding.type, stage: finding.stage, reason: finding.reason, ruleVersion: finding.ruleVersion,
+    id: finding.id, scanId: "sample", type: finding.type, status: finding.status, stage: finding.stage, reason: finding.reason, ruleVersion: finding.ruleVersion,
     evidenceIds: finding.evidenceIds,
     evidence: [
-      { stage: "product", url: "https://linen-house.cafe24.com/product/linen-shirt", priceLines: ["판매가 29,000원", "파손 보장 +1,500원 (선택됨)", "선물 포장 +2,000원"] },
+      { stage: "product", url: "https://linen-house.cafe24.com/product/linen-shirt", priceLines: finding.stage === "product" && own ? own : ["판매가 29,000원", "파손 보장 +1,500원 (선택됨)", "선물 포장 +2,000원"] },
       { stage: "cart", url: "https://linen-house.cafe24.com/order/basket", priceLines: ["상품 29,000원", "파손 보장 1,500원", "합계 30,500원"] },
       { stage: "checkout", url: "https://linen-house.cafe24.com/order/orderform", priceLines: ["상품과 옵션 30,500원", "필수 처리비 2,500원", "총 결제 33,000원"] },
     ],

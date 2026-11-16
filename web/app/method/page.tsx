@@ -3,7 +3,7 @@ import { DocBlock, SitePage } from "@/components/site/SiteChrome";
 import { surfaceLabels } from "@/lib/labels";
 import { surfaceKinds } from "@/lib/types";
 
-export const metadata: Metadata = { title: "분석 방법", description: "등록과 소유 확인, 구매 흐름 탐색, 증거와 가격 원장 수집, 규칙 판정까지 바로미가 진단하는 순서입니다." };
+export const metadata: Metadata = { title: "분석 방법", description: "등록과 소유 확인, 구매 흐름 탐색, 증거와 가격 원장 수집, 규칙 판정까지 바로미가 점검하는 순서입니다." };
 
 export default function MethodPage() {
   return (
@@ -12,7 +12,7 @@ export default function MethodPage() {
       lede="체크박스 선택, 금액 변화, 화면 요소 위치, 단계별 페이지, 가격 응답을 직접 기록하고 규칙으로 판정해요. 의미 해석이 모호한 소수 후보만 사람이나 별도 AI 검토로 넘겨요."
     >
       <DocBlock kicker="01" title="등록과 안전 확인">
-        <p className="muted">HTTPS 쇼핑몰 주소와 검사 권한 동의를 받아요. 장바구니와 주문서를 여는 전체 구매 흐름 진단은 메타 태그, 파일, DNS TXT 중 하나로 소유를 확인한 뒤에만 시작해요.</p>
+        <p className="muted">HTTPS 쇼핑몰 주소와 검사 권한 동의를 받아요. 장바구니와 주문서를 여는 전체 구매 흐름 점검은 메타 태그, 파일, DNS TXT 중 하나로 소유를 확인했거나, 운영자가 만든 전용 테스트 계정을 넣었을 때만 시작해요.</p>
         <p className="muted">모든 리다이렉트와 요청의 주소를 검사해 내부망·사설 주소 접근을 막아요. 확인 토큰은 소유 확인용일 뿐, 공개되지 않은 화면을 강제로 열거나 인증을 우회하는 데 쓰지 않아요.</p>
       </DocBlock>
       <DocBlock kicker="02" title="구매 흐름 탐색">
@@ -43,7 +43,7 @@ export default function MethodPage() {
         </dl>
       </DocBlock>
       <DocBlock title="검증 현황 공개">
-        <p className="muted">지금은 로컬에서 진단 시작부터 16가지 유형 보고서 열람·다운로드까지 한 번에 경험하는 것을 목표로 검증하고 있어요. 승인된 쇼핑몰 반복 실행, 여러 쇼핑몰 호환성, 소형 쇼핑몰 30초 목표가 입증되기 전에는 완성이라고 표시하지 않아요.</p>
+        <p className="muted">지금은 로컬에서 점검 시작부터 16가지 유형 보고서 열람·다운로드까지 한 번에 경험하는 것을 목표로 검증하고 있어요. 승인된 쇼핑몰 반복 실행, 여러 쇼핑몰 호환성, 소형 쇼핑몰 30초 목표가 입증되기 전에는 완성이라고 표시하지 않아요.</p>
       </DocBlock>
     </SitePage>
   );

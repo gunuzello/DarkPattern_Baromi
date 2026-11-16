@@ -23,7 +23,7 @@ const headline: Record<ReportItem["kind"], string> = {
 /** Checks whose evidence is the price ledger (screen-by-screen amounts). */
 const priceTypes: FindingType[] = ["DRIP_PRICING", "PRESELECTION", "HIDDEN_INFO"];
 
-function Block({ title, children }: { title: string; children: ReactNode }) {
+export function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rv-block">
       <h3 className="rv-block__title">{title}</h3>
@@ -32,7 +32,7 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Checklist({ id, items }: { id: string; items: string[] }) {
+export function Checklist({ id, items }: { id: string; items: string[] }) {
   const [done, setDone] = useState<Record<number, boolean>>({});
   return (
     <ul className="rv-checklist">

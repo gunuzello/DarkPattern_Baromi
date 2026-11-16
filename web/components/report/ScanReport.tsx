@@ -10,7 +10,7 @@ import { Mark, plainLabels, type ResultKind } from "@/components/ui/Status";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError, errorMessage, isDemo, usesSample } from "@/lib/api";
 import { sampleEvidenceLines } from "@/lib/demo";
-import { useBackToRegistration } from "@/lib/session";
+import { useBackToLogin } from "@/lib/session";
 import { blockerText, collectionFailureLabels, ruleByType, stageLabels } from "@/lib/labels";
 import { formatDuration, hostOf, pathLabel, viewportLabel } from "@/lib/format";
 import type { Finding, Report } from "@/lib/types";
@@ -20,6 +20,8 @@ import { CoverageTable, FlowTrack, LedgerTable } from "./ReportSections";
 import { kindOrder, ResultRing } from "./ResultRing";
 import { TypeDetail } from "./TypeDetail";
 import { TypeList, type ListFilter } from "./TypeList";
+import { guide } from "@/lib/guide";
+import { useRescan } from "@/components/scan/useRescan";
 
 const scanStateLabel: Record<Report["scanStatus"], string> = {
   QUEUED: "점검 대기", RUNNING: "점검 중", COMPLETED: "점검 완료", PARTIAL: "일부만 점검", FAILED: "점검 실패", CANCELLED: "점검 중단",
@@ -35,7 +37,6 @@ export function ScanReport({ id }: { id: string }) {
   const toast = useToast();
   const [report, setReport] = useState<Report>();
   const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
   const [downloadPending, setDownloadPending] = useState(false);
   const [filter, setFilter] = useState<ListFilter>("all");
   const [clearOpen, setClearOpen] = useState(false);
@@ -46,7 +47,9 @@ export function ScanReport({ id }: { id: string }) {
   const [aiError, setAiError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
-  const backToRegistration = useBackToRegistration();
+  const backToLogin = useBackToLogin();
+  const rescanner = useRescan(setError);
+  const pending = rescanner.pending;
 
   const load = useCallback(async () => {
     try {
@@ -54,11 +57,11 @@ export function ScanReport({ id }: { id: string }) {
       setReport(next);
       return next;
     } catch (cause) {
-      if (cause instanceof ApiError && cause.sessionLost && !usesSample(id)) { backToRegistration(); return undefined; }
+      if (cause instanceof ApiError && cause.sessionLost && !usesSample(id)) { backToLogin(); return undefined; }
       setError(errorMessage(cause, "점검 결과를 불러오지 못했어요."));
       return undefined;
     }
-  }, [id, backToRegistration]);
+  }, [id, backToLogin]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -89,7 +92,7 @@ export function ScanReport({ id }: { id: string }) {
     try {
       saveFile(await api.downloadReport(id));
     } catch (cause) {
-      if (cause instanceof ApiError && cause.sessionLost) { backToRegistration(); return; }
+      if (cause instanceof ApiError && cause.sessionLost) { backToLogin(); return; }
       setError(errorMessage(cause, "점검 결과를 내려받지 못했어요."));
     } finally {
       setDownloadPending(false);
@@ -105,24 +108,10 @@ export function ScanReport({ id }: { id: string }) {
     }
   }
 
-  async function rescan() {
+  function rescan() {
     if (!report) return;
     if (publicSample) { router.push("/scan/new"); return; }
-    setPending(true);
-    try {
-      const next = await api.createScan({
-        shopId: report.shopId, baselineScanId: id,
-        profile: report.executionMode === "DYNAMIC" ? "DYNAMIC" : "CONTEST",
-        viewport: report.viewport, purchasePath: report.purchasePath,
-      });
-      router.push(`/scan/${encodeURIComponent(next.scanId)}${next.deduplicated ? "?dedup=1" : ""}`);
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.sessionLost) backToRegistration();
-      else {
-        setError(errorMessage(cause, "다시 점검을 시작하지 못했어요."));
-        setPending(false);
-      }
-    }
+    void rescanner.start({ shopId: report.shopId, baselineScanId: id, executionMode: report.executionMode, viewport: report.viewport, purchasePath: report.purchasePath });
   }
 
   async function requestAi() {
@@ -180,7 +169,7 @@ export function ScanReport({ id }: { id: string }) {
     requestAnimationFrame(() => listRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }));
   }
 
-  if (!report) return error ? <Alert kind="error" title={error} /> : <p role="status" className="muted">점검 결과를 불러오고 있어요.</p>;
+  if (!report) return error ? <Alert kind="error" title={error} actions={<><ButtonLink variant="secondary" size="sm" href="/shops">내 쇼핑몰</ButtonLink><ButtonLink variant="tertiary" size="sm" href="/scan/new">새 점검</ButtonLink></>} /> : <p role="status" className="muted">점검 결과를 불러오고 있어요.</p>;
 
   const count = (kind: ResultKind) => items.filter((item) => item.kind === kind).length;
   const targets = aiTargets(items);
@@ -381,7 +370,7 @@ export function ScanReport({ id }: { id: string }) {
                     <div key={label}>
                       <span style={{ fontSize: 14, fontWeight: 700 }}>{label} <span className="tnum faint">{signals.length}</span></span>
                       <ul>
-                        {signals.map((signal, index) => <li key={index}>{ruleByType[signal.type]?.name ?? signal.type} ({stageLabels[signal.stage]})</li>)}
+                        {signals.map((signal, index) => <li key={index}>{guide[signal.type]?.plain ?? signal.type} ({stageLabels[signal.stage]})</li>)}
                       </ul>
                     </div>
                   ))}
@@ -412,6 +401,7 @@ export function ScanReport({ id }: { id: string }) {
         error={aiError}
         onConfirm={requestAi}
       />
+      {rescanner.dialog}
       {toast.node}
     </div>
   );
