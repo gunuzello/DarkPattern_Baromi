@@ -4,27 +4,11 @@ import { estimateAiUsage, exceedsAiCostCap } from "./ai-cost";
 import { buildAiCandidatePayload, toAiProviderCandidates } from "./ai-review-payload";
 import { legalRules } from "./legal-rules";
 import { aiRuleRubrics } from "./ai-rule-rubrics";
+import { extractAiOutputText, extractAiTokenUsage } from "./ai-provider";
 export { buildAiCandidatePayload } from "./ai-review-payload";
+export { extractAiOutputText, extractAiTokenUsage } from "./ai-provider";
 
 export const AI_REVIEW_PROMPT_VERSION = "review-v2";
-
-function outputText(body: unknown) {
-  if (!body || typeof body !== "object") return "";
-  const record = body as Record<string, unknown>;
-  if (typeof record.output_text === "string") return record.output_text;
-  if (Array.isArray(record.output)) {
-    return record.output.flatMap((item) => {
-      if (!item || typeof item !== "object") return [];
-      const content = (item as { content?: unknown }).content;
-      return Array.isArray(content) ? content.flatMap((entry) => entry && typeof entry === "object" && typeof (entry as { text?: unknown }).text === "string" ? [(entry as { text: string }).text] : []) : [];
-    }).join("\n");
-  }
-  if (Array.isArray(record.candidates)) {
-    const candidate = record.candidates[0] as { content?: { parts?: { text?: string }[] } } | undefined;
-    return candidate?.content?.parts?.map(({ text }) => text ?? "").join("") ?? "";
-  }
-  return "";
-}
 
 function checkedResponse(value: unknown, allowed: Map<string, string>) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("AI 응답 형식이 올바르지 않습니다.");
@@ -101,11 +85,12 @@ export async function runAiReviewJob(id: string) {
           body: JSON.stringify(input),
         });
         if (!response.ok) throw new Error(`AI 제공자 응답 실패(${response.status})`);
-        const body = await response.json() as { usage?: { input_tokens?: number; output_tokens?: number }; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number } };
-        const measured = estimateAiUsage({ provider: new URL(endpoint).hostname, model, purpose: "selected-rule-review", inputTokens: body.usage?.input_tokens ?? body.usageMetadata?.promptTokenCount ?? 0, outputTokens: body.usage?.output_tokens ?? ((body.usageMetadata?.candidatesTokenCount ?? 0) + (body.usageMetadata?.thoughtsTokenCount ?? 0)) });
+        const body = await response.json();
+        const tokenUsage = extractAiTokenUsage(body);
+        const measured = estimateAiUsage({ provider: new URL(endpoint).hostname, model, purpose: "selected-rule-review", ...tokenUsage });
         usage.push(measured);
         if (exceedsAiCostCap({ ...measured, estimatedCostUsd: usage.reduce((sum, item) => sum + item.estimatedCostUsd, 0) })) throw new Error("AI 비용 상한을 초과했습니다.");
-        const parsed: unknown = JSON.parse(outputText(body));
+        const parsed: unknown = JSON.parse(extractAiOutputText(body));
         const allowed = new Map(requestCandidate.evidence.map((evidence, index) => [evidence.evidenceId, candidate.evidence[index].evidenceId]));
         const value = checkedResponse(parsed, allowed);
         const citedEvidence = value.evidenceIds.flatMap((providerId) => {

@@ -7,6 +7,16 @@ import { decryptCredentials, encryptCredentials } from "../src/credential-vault"
 import { buildAiCandidatePayload, restoreAiCandidateIds, toAiProviderCandidates } from "../src/ai-review-payload";
 import { collectRuleReviewCandidates } from "../src/review-candidates";
 
+test("Gemini 응답에서 구조화 결과와 토큰 사용량을 읽는다", async () => {
+  const { extractAiOutputText, extractAiTokenUsage } = await import("../src/ai-provider");
+  const response = {
+    candidates: [{ content: { parts: [{ text: JSON.stringify({ verdict: "RISK", evidenceIds: ["evidence-1"] }) }] } }],
+    usageMetadata: { promptTokenCount: 731, candidatesTokenCount: 190, thoughtsTokenCount: 24 },
+  };
+  expect(JSON.parse(extractAiOutputText(response))).toMatchObject({ verdict: "RISK", evidenceIds: ["evidence-1"] });
+  expect(extractAiTokenUsage(response)).toEqual({ inputTokens: 731, outputTokens: 214 });
+});
+
 test("AI 선택 항목은 기본 판정 종류와 관계없이 증거가 있을 때만 전송한다", () => {
   const report = {
     snapshots: [{ evidenceId: "evidence:product", stage: "product", textLines: ["유료 옵션이 선택되어 있습니다."] }],
