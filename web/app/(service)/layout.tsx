@@ -17,8 +17,8 @@ export default function ServiceLayout({ children }: { children: ReactNode }) {
           <SideNav />
           <AccountControls compact />
           <div className="side__foot">
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{isDemo ? "예시 데이터로 보는 중" : "무료 진단"}</span>
-            <span className="faint" style={{ fontSize: 13 }}>{isDemo ? "실제 쇼핑몰을 검사하지 않아요" : "기본 엔진 결과를 제공해요"}</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{isDemo ? "예시 데이터로 보는 중" : "무료 기본 점검"}</span>
+            <span className="faint" style={{ fontSize: 13 }}>{isDemo ? "실제 쇼핑몰을 검사하지 않아요" : "16가지 항목을 무료로 점검해요"}</span>
           </div>
         </aside>
         <main id="main" className="main">{children}</main>

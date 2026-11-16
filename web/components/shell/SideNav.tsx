@@ -13,7 +13,7 @@ export function SideNav() {
       icon: "shop",
       current: pathname.startsWith("/shops") || pathname.startsWith("/shop/") || pathname.startsWith("/report") || (pathname.startsWith("/scan/") && pathname !== "/scan/new"),
     },
-    { href: "/scan/new", label: "새 진단", icon: "plus", current: pathname === "/scan/new" },
+    { href: "/scan/new", label: "새 점검", icon: "plus", current: pathname === "/scan/new" },
     { href: "/criteria", label: "탐지 기준", icon: "book", current: false },
   ];
   return (
