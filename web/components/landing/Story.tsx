@@ -10,7 +10,7 @@ const steps: { no: string; stage: string; title: string; body: string; records: 
   { no: "01", stage: "상품 상세", title: "미리 선택된 유료 옵션을 찾아요", body: "옵션마다 선택 상태와 금액을 기록해요. 손님이 고르기 전에 체크된 유료 옵션이 있고, 해제하면 총액이 줄어들면 위험 신호으로 표시해요.", records: ["옵션 선택 상태", "옵션별 추가 금액", "해제했을 때 총액"], badge: <Badge kind="risk">위험 신호 1</Badge> },
   { no: "02", stage: "장바구니", title: "화면 금액과 실제 금액을 맞춰봐요", body: "화면에 보인 금액과 쇼핑몰이 주고받은 가격 데이터를 나란히 기록해요. 두 금액이 같을 때만 판정에 써요.", records: ["화면에 보인 합계", "가격 데이터의 합계", "두 값의 일치 여부"], badge: <Badge kind="clear">금액 일치</Badge> },
   { no: "03", stage: "주문서", title: "뒤늦게 붙는 필수 비용을 찾아요", body: "앞 단계에 없던 비용이 새로 생기면 기록해요. 결제 버튼은 누르지 않고 그 앞에서 멈춰요.", records: ["새로 생긴 필수 비용", "결제 예정 금액", "멈춘 위치"], badge: <Badge kind="risk">위험 신호 1</Badge> },
-  { no: "04", stage: "보고서", title: "16가지 항목을 근거와 함께", body: "위험 신호, 검토 필요, 미관찰, 미검사를 나눠 보여주고 스크린샷과 가격 원장으로 근거를 연결해요. 고친 뒤엔 같은 조건으로 재진단해 비교해요.", records: ["검사한 범위와 미검사 이유", "스크린샷, 문구, 가격 원장", "신규, 재발견, 이번에 미관찰"] },
+  { no: "04", stage: "보고서", title: "16가지 항목을 근거와 함께", body: "위험, 검토 필요, 안전, 미검사를 나눠 보여주고 스크린샷과 가격 원장으로 근거를 연결해요. 고친 뒤엔 같은 조건으로 재진단해 비교해요.", records: ["검사한 범위와 미검사 이유", "스크린샷, 문구, 가격 원장", "신규, 재발견, 이번에 미관찰"] },
 ];
 
 /**
@@ -42,6 +42,10 @@ export function Story({ hero }: { hero: ReactNode }) {
     <section id="how" aria-label="바로미가 구매 흐름을 진단하는 방법" className="lp-wrap story">
       <div>
         {hero}
+        {/* Phones: the sticky panel is hidden, so the model sits under the hero at half height. */}
+        <div className="story__inline-model" aria-hidden="true">
+          <StackModel />
+        </div>
         {steps.map((step, index) => (
           <article key={step.no} ref={(element) => { refs.current[index] = element; }} data-step={index} className="story__step">
             <span className="story__step-no tnum">{step.no} {step.stage}</span>
@@ -54,6 +58,12 @@ export function Story({ hero }: { hero: ReactNode }) {
               </ul>
             </div>
             {step.badge ? <div>{step.badge}</div> : null}
+            {/* Phones: the screen for this step, right under its text. */}
+            {stageScreens[index] ? (
+              <div className="story__inline-screen" aria-label={`${stageScreens[index].label} 화면 예시`} role="group">
+                {stageScreens[index].node}
+              </div>
+            ) : null}
           </article>
         ))}
       </div>

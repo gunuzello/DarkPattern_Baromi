@@ -114,7 +114,7 @@ export const stageScreens: { key: string; label: string; node: ReactNode }[] = [
           <div className="quiet" style={{ fontSize: 13, lineHeight: 1.6 }}><b>개선 방법</b> 유료 옵션의 기본 선택을 해제하고 구매자가 직접 선택하게 하세요.</div>
         </div>
       </Browser>
-      <Note badge={<Badge kind="done">보고서</Badge>} numbered={false}>16가지 항목을 위험 신호, 검토 필요, 미관찰, 미검사로 나누고 스크린샷과 가격 원장으로 근거를 연결해요.</Note>
+      <Note badge={<Badge kind="done">보고서</Badge>} numbered={false}>16가지 항목을 위험, 검토 필요, 안전, 미검사로 나누고 스크린샷과 가격 원장으로 근거를 연결해요.</Note>
     </>,
   },
 ];

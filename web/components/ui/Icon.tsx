@@ -14,6 +14,7 @@ const paths = {
   refresh: <path d="M16 10 A6 6 0 1 1 13.5 5.2 M16 3.5 V6.5 H13" />,
   plus: <path d="M10 4 V16 M4 10 H16" />,
   lock: <path d="M5 9 H15 V17 H5 Z M7 9 V6.5 A3 3 0 0 1 13 6.5 V9" />,
+  menu: <path d="M3.5 5.5 H16.5 M3.5 10 H16.5 M3.5 14.5 H16.5" />,
   eye: <><path d="M2 10 C4.5 5.5 15.5 5.5 18 10 C15.5 14.5 4.5 14.5 2 10 Z" /><circle cx="10" cy="10" r="2.5" /></>,
 } as const;
 

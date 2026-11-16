@@ -120,6 +120,9 @@ export async function getScan(scanId: string): Promise<ScanState> {
     ...Object.fromEntries(surfaceAt.map(([kind, at]) => [`surface:${kind}`, dynamic
       ? phase(Math.max(2, at - 3), at, doneSurfaces[kind] as PhaseResult["status"], surfaceReasons[kind])
       : { status: "SKIPPED", reason: "별도 영역 탐색은 전체 구매 흐름 진단에서 해요.", evidenceIds: [] }])),
+    "site-crawl": dynamic
+      ? phase(4, 20, "COVERED", "내부 경로 42곳을 읽기 전용으로 둘러봤어요.")
+      : { status: "SKIPPED", reason: "전체 화면 탐색은 전체 구매 흐름 진단에서 해요.", evidenceIds: [] },
   };
   return {
     scanId,
@@ -146,6 +149,7 @@ export async function getScan(scanId: string): Promise<ScanState> {
       suspected: (reached(11) ? 1 : 0) + (reached(19) ? 1 : 0) + (reached(12) ? 1 : 0),
       reviewNeeded: reached(9) ? 2 : 0,
       notTested: active ? 0 : 3,
+      notObserved: active ? 0 : 8,
     },
   };
 }
@@ -178,6 +182,15 @@ const samplePriceLedger: PriceLedger = {
     { stage: "cart", evidence: { id: "page:cart", url: "https://linen-house.cafe24.com/order/basket" }, verification: "SCREEN_ONLY", displayedLines: ["상품 29,000원", "파손 보장 1,500원", "합계 30,500원"] },
     { stage: "checkout", evidence: { id: "page:checkout", url: "https://linen-house.cafe24.com/order/orderform" }, verification: "SCREEN_NETWORK_PARTIAL", displayedLines: ["상품과 옵션 30,500원", "필수 처리비 2,500원", "총 결제 33,000원"], networkValues: [{ evidenceId: "net_04", won: 33000, matchedScreen: true }, { evidenceId: "net_04", won: 31000, matchedScreen: false }] },
   ],
+};
+
+/** What the sample report shows in place of a screenshot, per finding. */
+export const sampleEvidenceLines: Record<number, string[]> = {
+  142: ["판매가 29,000원", "파손 보장 +1,500원 (선택됨)", "합계 30,500원"],
+  187: ["상품과 옵션 30,500원", "필수 처리비 2,500원 (새로 표시)", "총 결제 33,000원"],
+  151: ["오늘 마감까지 03:59:58", "남은 수량 3개", "새 세션에서도 같은 값"],
+  109: ["정가 59,000원 (취소선)", "판매가 29,000원", "51% 할인"],
+  98: ["실시간 인기 1위", "기준·기간 표시 없음"],
 };
 
 export const sampleReport: Report = {
@@ -215,8 +228,8 @@ export const sampleReport: Report = {
     { id: 98, type: "FALSE_RECOMMENDATION", status: "REVIEW_NEEDED", stage: "product", reason: "‘실시간 인기 1위’ 표시에 순위의 기준과 기간이 적혀 있지 않아요.", ruleVersion: "1", evidenceIds: ["ev_0098"] },
   ],
   reviewCandidates: [
-    { id: "c1", kind: "POPUP_TEXT", stage: "product", text: "혜택 포기하고 그냥 살게요", reason: "팝업의 거절 선택지가 손해를 강조하는 문구예요. 규칙만으로 의미를 확정하지 않았어요.", evidenceIds: ["ev_0221"] },
-    { id: "c2", kind: "SURFACE_TEXT", stage: "surface", text: "앱 설치하면 3,000원 추가 할인", reason: "구매와 직접 관련 없는 행동을 조건으로 거는지 확인이 필요해요.", evidenceIds: ["ev_0230"] },
+    { id: "review:rule:false_discount", kind: "SEMANTIC_REVIEW", stage: "product", ruleType: "FALSE_DISCOUNT", text: "정가 59,000원 → 29,000원 (51% 할인)", reason: "표시된 할인 기준 가격의 실제 판매 이력은 화면만으로 검증할 수 없어요.", evidenceIds: ["ev_0109"] },
+    { id: "review:rule:false_recommendation", kind: "SEMANTIC_REVIEW", stage: "product", ruleType: "FALSE_RECOMMENDATION", text: "실시간 인기 1위", reason: "인기 순위의 산정 기준과 기간을 화면에서 찾지 못했어요.", evidenceIds: ["ev_0098"] },
   ],
   surfaceObservations: [
     { evidenceId: "ev_0301", kind: "AUTH", url: "https://linen-house.cafe24.com/member/login", status: 200, title: "로그인", text: "", outcome: "DISCOVERED" },
@@ -226,7 +239,7 @@ export const sampleReport: Report = {
     baselineScanId: "sample-1105",
     added: [{ type: "DRIP_PRICING", stage: "checkout", reason: "주문서 필수 처리비 공개" }, { type: "URGENCY_SCARCITY", stage: "product", reason: "상품 상세 긴급성 표시" }],
     repeated: [{ type: "PRESELECTION", stage: "product", reason: "상품 상세 옵션 사전선택" }],
-    notObserved: [{ type: "DRIP_PRICING", stage: "checkout", reason: "주문서 배송비 공개" }],
+    notObserved: [{ type: "CONFIRM_SHAMING", stage: "checkout", reason: "주문서 쿠폰 거절 문구" }],
   },
   aiEligible: true,
   aiReview: null,
@@ -262,8 +275,8 @@ export async function getReport(scanId: string): Promise<Report> {
           result: {
             promptVersion: "v3",
             decisions: [
-              { candidateId: "c1", label: "LIKELY_RISK", confidence: 0.78, rationale: "거절 선택지가 손해를 강조하는 표현으로, 거부를 어렵게 만드는 문구에 가까워요." },
-              { candidateId: "c2", label: "INSUFFICIENT_EVIDENCE", confidence: 0.55, rationale: "앱 설치가 구매 조건인지 화면만으로는 단정하기 어려워요." },
+              { candidateId: "review:rule:false_discount", label: "NEEDS_REVIEW", confidence: 0.72, rationale: "정가 59,000원으로 판매한 기간이 화면에 없어요. 판매 이력을 확인해 주세요." },
+              { candidateId: "review:rule:false_recommendation", label: "INSUFFICIENT_EVIDENCE", confidence: 0.55, rationale: "순위 기준이 없지만 실제 판매 데이터 없이는 거짓인지 단정할 수 없어요." },
             ],
           },
         };

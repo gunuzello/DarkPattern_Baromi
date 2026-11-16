@@ -49,7 +49,7 @@ export function SiteHeader() {
             aria-label="메뉴"
             onClick={() => setOpen(!open)}
           >
-            <Icon name={open ? "x" : "down"} />
+            <Icon name={open ? "x" : "menu"} />
           </button>
         </div>
       </div>
@@ -86,7 +86,7 @@ export function SiteFooter() {
 }
 
 /** Marketing sub-page: top header, editorial head, content, closing band, footer. */
-export function SitePage({ eyebrow, title, lede, children }: { eyebrow: string; title: ReactNode; lede: string; children: ReactNode }) {
+export function SitePage({ eyebrow, title, lede, children }: { eyebrow?: string; title: ReactNode; lede: string; children: ReactNode }) {
   return (
     <div className="lp">
       <a href="#main" className="skip-link">본문으로 건너뛰기</a>
@@ -94,19 +94,19 @@ export function SitePage({ eyebrow, title, lede, children }: { eyebrow: string; 
       <main id="main">
         <section className="doc-head">
           <div className="lp-wrap">
-            <p className="eyebrow">{eyebrow}</p>
+            {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
             <h1 className="t-display" style={{ fontSize: "clamp(36px, 4.4vw, 52px)" }}>{title}</h1>
             <p className="doc-head__lede">{lede}</p>
           </div>
         </section>
         <div className="lp-wrap doc-body">{children}</div>
         <section className="lp-closing">
-          <div className="lp-wrap lp-closing__inner" style={{ padding: "88px 32px" }}>
+          <div className="lp-wrap lp-closing__inner" style={{ paddingBlock: 88 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", lineHeight: 1.1, letterSpacing: "-0.035em", fontWeight: 800 }}>배포하기 전에<br />한 번 먼저 점검하세요.</h2>
               <p>주소만 넣으면 공개 화면 진단부터 바로 시작할 수 있어요.</p>
             </div>
-            <ButtonLink href="/scan/new" variant="inverse" size="lg">무료로 진단하기</ButtonLink>
+            <ButtonLink href="/scan/new" variant="brand" size="lg">무료로 진단하기</ButtonLink>
           </div>
         </section>
       </main>

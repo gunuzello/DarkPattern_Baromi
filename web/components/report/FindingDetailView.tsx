@@ -75,7 +75,6 @@ export function FindingDetailView({ scanId, findingId }: { scanId: string; findi
                 stage={snapshot.stage}
                 area={snapshot.screenshotArea}
                 element={snapshot.stage === detail.stage ? detail.elementBounds : undefined}
-                priceLines={snapshot.priceLines}
               />
               <ul className="tnum" style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 2, fontSize: 13, color: "var(--ink-2)" }}>
                 {snapshot.priceLines.map((line, index) => <li key={index}>{line}</li>)}

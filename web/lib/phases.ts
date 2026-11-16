@@ -16,7 +16,8 @@ export const surfacePhase = (kind: SurfaceKind): PhaseId => `surface:${kind}`;
 export function phaseFor(source: Source, id: PhaseId): PhaseResult {
   const reported = source.phaseResults?.[id];
   if (reported?.status) return reported;
-  if (id === "site-crawl") return { status: "SKIPPED" };
+  // Not reported is not the same as skipped: stay neutral until the server says otherwise.
+  if (id === "site-crawl") return { status: "PENDING" };
   if (id.startsWith("surface:")) {
     const kind = id.slice("surface:".length) as SurfaceKind;
     return { status: (source.surfaceCoverage?.[kind] ?? "PENDING") as PhaseStatus };
