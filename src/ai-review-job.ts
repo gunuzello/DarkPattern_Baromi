@@ -108,9 +108,17 @@ export async function runAiReviewJob(id: string) {
         const parsed: unknown = JSON.parse(outputText(body));
         const allowed = new Map(requestCandidate.evidence.map((evidence, index) => [evidence.evidenceId, candidate.evidence[index].evidenceId]));
         const value = checkedResponse(parsed, allowed);
+        const citedEvidence = value.evidenceIds.flatMap((providerId) => {
+          const localId = allowed.get(providerId);
+          const evidence = candidate.evidence.find((item) => item.evidenceId === localId);
+          if (!evidence || !localId) return [];
+          const text = [evidence.title, evidence.text, ...(evidence.priceLines ?? []), ...(evidence.interaction?.revealedText ?? []), ...(evidence.selectedControls ?? [])]
+            .filter(Boolean).join(" · ").slice(0, 1200);
+          return [{ evidenceId: localId, stage: evidence.stage, text }];
+        });
         results.push({ ruleType, status: value.verdict === "INSUFFICIENT_DATA" ? "INSUFFICIENT_DATA" : "COMPLETED", verdict: value.verdict === "INSUFFICIENT_DATA" ? null : value.verdict,
           summary: String(value.summary).slice(0, 500), reason: String(value.reason).slice(0, 800),
-          observedFacts: requestCandidate.observedFacts ?? [],
+          observedFacts: requestCandidate.observedFacts ?? [], evidence: citedEvidence,
           evidenceIds: value.evidenceIds.map((item: string) => allowed.get(item)),
           recommendations: value.recommendations.slice(0, 8).map((item) => item.slice(0, 300)),
           limitations: value.limitations.slice(0, 8).map((item) => item.slice(0, 300)),

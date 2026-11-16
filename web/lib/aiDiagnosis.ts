@@ -72,14 +72,14 @@ export const aiDiagnosis = {
         const report = await api.getReport(scanId);
         const review = report.aiReview;
         if (!review) return null;
-        const result = review.result as ({ selectedRuleTypes?: FindingType[]; summary?: { safe?: number; partiallySafe?: number; risk?: number }; results?: { ruleType: FindingType; status: string; verdict?: string | null; summary?: string; reason?: string; observedFacts?: string[]; evidenceIds?: string[]; recommendations?: string[]; limitations?: string[] }[] } | null) ?? null;
+        const result = review.result as ({ selectedRuleTypes?: FindingType[]; summary?: { safe?: number; partiallySafe?: number; risk?: number }; results?: { ruleType: FindingType; status: string; verdict?: string | null; summary?: string; reason?: string; observedFacts?: string[]; evidenceIds?: string[]; evidence?: { evidenceId: string; stage?: Stage; text: string }[]; recommendations?: string[]; limitations?: string[] }[] } | null) ?? null;
         const items: AiItemResult[] = (result?.results ?? []).map((item) => ({
           type: item.ruleType,
           status: item.status === "INSUFFICIENT_DATA" || item.status === "FAILED" ? "INSUFFICIENT" : "ANALYZED",
           verdict: item.verdict === "PARTIALLY_SAFE" ? "PARTIAL" : item.verdict === "RISK" || item.verdict === "SAFE" ? item.verdict : undefined,
           conclusion: item.summary ?? item.reason ?? "분석 결과를 확인할 수 없어요.",
           reasoning: item.reason ?? item.limitations?.join(" ") ?? "",
-          evidence: (item.observedFacts ?? []).map((text, index) => ({ text, evidenceId: item.evidenceIds?.[index] })),
+          evidence: item.evidence?.map((evidence) => ({ text: evidence.text || "수집된 구조화 근거", evidenceId: evidence.evidenceId, stage: evidence.stage })) ?? (item.observedFacts ?? []).map((text) => ({ text })),
           recommendations: (item.recommendations ?? []).map((action) => ({ title: "개선 권고", reason: item.reason ?? "", action })),
         }));
         return { id: review.id, scanId, status: review.status, requestedTypes: result?.selectedRuleTypes ?? items.map((item) => item.type), createdAt: "", completedAt: undefined, doneCount: items.length, error: review.error ?? undefined,
