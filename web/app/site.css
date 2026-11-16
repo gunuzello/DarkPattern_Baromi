@@ -1796,47 +1796,10 @@ a:has(> .logo),
   background: var(--link);
 }
 
-/* inspection log */
-.scan-log {
-  list-style: none;
-  margin: 0;
-  padding: 10px 14px 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  /* deep brand indigo (the brand gradient, darkened) instead of slate navy */
-  background: linear-gradient(115deg, #232c73 0%, #33287a 100%);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.5;
-  color: #d4daff;
-}
-.scan-log__line {
-  display: flex;
-  gap: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.scan-log__line > span {
-  flex: none;
-  width: 10px;
-  font-weight: 700;
-}
-.scan-log__line--ok > span { color: #7ef0c4; }
-.scan-log__line--warn { color: #fff; }
-.scan-log__line--warn > span { color: #ffb0b0; }
-.scan-log__line--info > span { color: #b9c2ff; }
-
 /* motion: runs while the step is on screen (sticky panel) and once on phones */
 .stage-screen[data-on="true"] .live-sweep,
 .story__inline-screen .live-sweep {
   animation: live-sweep 1.5s var(--ease) 0.15s 1 both;
-}
-.stage-screen[data-on="true"] .scan-log__line,
-.story__inline-screen .scan-log__line {
-  animation: log-in 0.35s var(--ease) both;
-  animation-delay: calc(0.9s + var(--i) * 0.55s);
 }
 .stage-screen[data-on="true"] .detect,
 .story__inline-screen .detect {
@@ -1852,10 +1815,6 @@ a:has(> .logo),
   85% { opacity: 1; }
   100% { transform: translateY(var(--sweep-to, 420px)); opacity: 0; }
 }
-@keyframes log-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
-}
 @keyframes detect-in {
   from { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0); background: transparent; }
 }
@@ -1866,8 +1825,6 @@ a:has(> .logo),
   .live-chip i,
   .stage-screen[data-on="true"] .live-sweep,
   .story__inline-screen .live-sweep,
-  .stage-screen[data-on="true"] .scan-log__line,
-  .story__inline-screen .scan-log__line,
   .stage-screen[data-on="true"] .detect,
   .story__inline-screen .detect,
   .stage-screen[data-on="true"] .detect__tag,
@@ -2246,9 +2203,6 @@ a:has(> .logo),
   }
   .pp__photo {
     max-height: 220px;
-  }
-  .scan-log__line {
-    white-space: normal;
   }
 }
 

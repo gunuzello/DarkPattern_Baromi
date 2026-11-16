@@ -6,14 +6,11 @@ import { sampleReport } from "@/lib/demo";
 
 const SHIRT = "/landing/linen-shirt.webp";
 
-type LogLine = { tone: "ok" | "warn" | "info"; text: string };
-
 /**
- * A browser window the scanner is working in: "점검 중" chip in the bar, a sweep over the
- * page, and a short inspection log docked at the bottom. Lines appear one by one while the
- * screen is the active step (see .live rules in site.css).
+ * A browser window the scanner is working in: "점검 중" chip in the bar and a sweep over the
+ * page while the screen is the active step (see .live rules in site.css).
  */
-function Browser({ url, log, children }: { url: string; log: LogLine[]; children: ReactNode }) {
+function Browser({ url, children }: { url: string; children: ReactNode }) {
   return (
     <div className="browser live">
       <div className="browser__bar">
@@ -25,13 +22,6 @@ function Browser({ url, log, children }: { url: string; log: LogLine[]; children
         <span className="live-sweep" aria-hidden="true" />
         {children}
       </div>
-      <ol className="scan-log" aria-label="바로미가 기록한 내용">
-        {log.map((line, index) => (
-          <li key={line.text} className={`scan-log__line scan-log__line--${line.tone}`} style={{ "--i": index } as CSSProperties}>
-            <span aria-hidden="true">{line.tone === "ok" ? "✓" : line.tone === "warn" ? "!" : "›"}</span>{line.text}
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }
@@ -69,11 +59,6 @@ export const stageScreens: { key: string; label: string; node: ReactNode }[] = [
     node: <>
       <Browser
         url="linen-house.cafe24.com/product/linen-shirt"
-        log={[
-          { tone: "info", text: "옵션 4개와 위치를 읽었어요" },
-          { tone: "warn", text: "파손 보장 +1,500원 · 손님이 누르기 전부터 선택됨" },
-          { tone: "info", text: "해제해 보니 총액 30,500원 → 29,000원" },
-        ]}
       >
         <div className="pp">
           <div className="pp__gallery">
@@ -112,11 +97,6 @@ export const stageScreens: { key: string; label: string; node: ReactNode }[] = [
     node: <>
       <Browser
         url="linen-house.cafe24.com/order/basket"
-        log={[
-          { tone: "info", text: "담기 1번 요청 → 장바구니에 1개" },
-          { tone: "info", text: "가격 응답 1건 수집 · total 30500" },
-          { tone: "ok", text: "화면 합계와 가격 데이터가 같아요" },
-        ]}
       >
         <div className="cart">
           <b className="cart__title">장바구니 <span className="tnum">1</span></b>
@@ -157,11 +137,6 @@ export const stageScreens: { key: string; label: string; node: ReactNode }[] = [
     node: <>
       <Browser
         url="linen-house.cafe24.com/order/orderform"
-        log={[
-          { tone: "ok", text: "이름·전화·주소 입력란 3곳을 가렸어요" },
-          { tone: "warn", text: "필수 처리비 2,500원 · 앞 단계에 없던 비용" },
-          { tone: "info", text: "결제 버튼 앞에서 멈췄어요 · 누르지 않음" },
-        ]}
       >
         <div className="co">
           <div className="co__col">
@@ -199,11 +174,6 @@ export const stageScreens: { key: string; label: string; node: ReactNode }[] = [
     node: <>
       <Browser
         url="baromi.app/report/sample"
-        log={[
-          { tone: "ok", text: "16가지 판정을 마쳤어요" },
-          { tone: "info", text: "확인 화면과 가격 기록을 항목마다 연결했어요" },
-          { tone: "ok", text: "결과 완성 · 42.3초" },
-        ]}
       >
         <div className="mini-report">
           <div className="mini-report__top">
