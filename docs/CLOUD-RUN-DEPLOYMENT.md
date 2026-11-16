@@ -11,6 +11,15 @@ Vercel에서 `web` 앱을 배포한다. Cloud Run Service는 기존 `/api/v1` AP
 
 ## 배포 순서
 
+### AI 꼼꼼 점검 (Gemini)
+
+1. Google AI Studio에서 Gemini API 키를 만든 뒤 Cloud Console → 보안 → Secret Manager에서 `BAROMI_AI_API_KEY` 시크릿을 만들고 값에 키를 저장한다. 키 값은 프론트 환경변수나 저장소 파일에 넣지 않는다.
+2. `baromi-worker` 서비스 계정에 이 시크릿의 Secret Accessor 권한만 부여한다. 배포 스크립트는 시크릿이 있을 때만 작업기에 연결한다.
+3. Cloud Run 작업기 환경변수는 `BAROMI_AI_API_URL=https://generativelanguage.googleapis.com/v1beta`, `BAROMI_AI_MODEL=gemini-3.5-flash-lite`, `BAROMI_AI_INPUT_USD_PER_MILLION=0.30`, `BAROMI_AI_OUTPUT_USD_PER_MILLION=2.50`, `BAROMI_AI_MAX_COST_USD=0.25`를 사용한다. 요금은 변경될 수 있으므로 배포 시 Gemini 가격표와 다시 대조한다.
+4. AI 검토 작업만 이 API를 호출한다. 기본 쇼핑몰 진단은 AI 키가 없어도 실행된다.
+
+실제 AI 호출은 항목별 호출로 과금될 수 있다. 첫 운영 확인은 테스트 쇼핑몰 하나와 한 항목으로 제한하고, Cloud Logging과 `AiReview.usageJson`의 사용량을 비교한다.
+
 1. 결제가 연결된 Google Cloud 프로젝트에서 API와 Job용 서비스 계정을 준비한다. API 계정에 해당 Job 실행 권한을 부여하고 서버 비밀값은 Secret Manager에서 주입한다.
 2. 저장소 루트의 Dockerfile로 API와 브라우저 이미지(빌드 타깃 `worker`)를 빌드한다. Job은 한 건 처리 진입점을 사용하도록 설정한다.
 3. Cloud Run API HTTPS URL을 Vercel의 `BAROMI_API_ORIGIN`에 넣는다. Vercel 운영 URL을 API 허용 출처와 Supabase Auth 리디렉션에 등록하고, 프론트 데모 모드를 끈다.

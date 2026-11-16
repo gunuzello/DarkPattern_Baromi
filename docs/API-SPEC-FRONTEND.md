@@ -255,7 +255,7 @@
 
 기본 보고서 생성 후 유료 권한이 있는 소유자가 요청한다. `ruleCoverage`의 16개 유형을 모두 선택할 수 있다. `aiReviewCandidateCount`는 이전 검토 후보의 참고값이며 선택 가능 유형을 제한하지 않는다.
 
-서버 작업 환경에는 `BAROMI_AI_API_URL`, `BAROMI_AI_API_KEY`, `BAROMI_AI_MODEL`이 필요하다. 예상 비용 제한을 사용하려면 `BAROMI_AI_INPUT_USD_PER_MILLION`, `BAROMI_AI_OUTPUT_USD_PER_MILLION`, `BAROMI_AI_MAX_COST_USD`를 함께 설정한다. API 키는 프론트에 전달하지 않는다. 현재 모델 입력은 정리된 텍스트·구조화 증거이며, 스크린샷은 보고서 참조로만 제공한다.
+서버 작업 환경에는 `BAROMI_AI_API_URL=https://generativelanguage.googleapis.com/v1beta`, `BAROMI_AI_API_KEY`(Secret Manager), `BAROMI_AI_MODEL=gemini-3.5-flash-lite`가 필요하다. Gemini 사용량 계측 기본값은 표준 요금 입력 $0.30/1M, 출력 $2.50/1M 토큰이며 `BAROMI_AI_MAX_COST_USD` 기본 상한은 요청 묶음당 $0.25다. 요금은 변경될 수 있어 제공자 가격표를 확인해야 한다. API 키는 프론트에 전달하지 않는다. 현재 모델 입력은 정리된 텍스트·구조화 증거이며, 스크린샷은 보고서 참조로만 제공한다.
 
 요청: `{ "selectedRuleTypes": ["PRESELECTION", "DRIP_PRICING"] }`. 빈 배열, 중복, 미등록 유형, 16개 초과는 400이다. 현재 작업이 실행 중이면 기존 작업 ID를 반환한다. 완료된 유형만 재요청하면 기존 결과를 반환하고, 새로운 유형을 추가하면 이전 항목 결과를 보존하고 새 유형만 분석한다.
 

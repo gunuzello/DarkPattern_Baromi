@@ -13,6 +13,11 @@ WORKER_ACCOUNT="baromi-worker"
 IMAGE_TAG="${BAROMI_IMAGE_TAG:-bootstrap-20261117b}"
 FRONTEND_ORIGIN="${FRONTEND_ORIGIN:-https://baromi-web.vercel.app}"
 SUPABASE_STORAGE_BUCKET="${SUPABASE_STORAGE_BUCKET:-baromi-evidence}"
+BAROMI_AI_API_URL="${BAROMI_AI_API_URL:-https://generativelanguage.googleapis.com/v1beta}"
+BAROMI_AI_MODEL="${BAROMI_AI_MODEL:-gemini-3.5-flash-lite}"
+BAROMI_AI_INPUT_USD_PER_MILLION="${BAROMI_AI_INPUT_USD_PER_MILLION:-0.30}"
+BAROMI_AI_OUTPUT_USD_PER_MILLION="${BAROMI_AI_OUTPUT_USD_PER_MILLION:-2.50}"
+BAROMI_AI_MAX_COST_USD="${BAROMI_AI_MAX_COST_USD:-0.25}"
 
 if [[ -f web/.env.local ]]; then
   set -a
@@ -55,6 +60,13 @@ for secret in DATABASE_URL SUPABASE_SERVICE_ROLE_KEY BAROMI_CREDENTIAL_KEY; do
   gcloud secrets add-iam-policy-binding "$secret" --project="$PROJECT_ID" --member="$WORKER_PRINCIPAL" --role=roles/secretmanager.secretAccessor --quiet >/dev/null
 done
 
+# AI is an optional paid follow-up feature. Never create or print its API key here.
+AI_SECRET=""
+if gcloud secrets describe BAROMI_AI_API_KEY --project="$PROJECT_ID" >/dev/null 2>&1; then
+  AI_SECRET=",BAROMI_AI_API_KEY=BAROMI_AI_API_KEY:latest"
+  gcloud secrets add-iam-policy-binding BAROMI_AI_API_KEY --project="$PROJECT_ID" --member="${WORKER_PRINCIPAL:-serviceAccount:${WORKER_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com}" --role=roles/secretmanager.secretAccessor --quiet >/dev/null
+fi
+
 API_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/baromi-api:${IMAGE_TAG}"
 MIGRATION_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/baromi-migrate:${IMAGE_TAG}"
 WORKER_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/baromi-worker:${IMAGE_TAG}"
@@ -85,7 +97,8 @@ gcloud run jobs deploy "$WORKER_JOB" \
   --project="$PROJECT_ID" --region="$REGION" --image="$WORKER_IMAGE" \
   --service-account="${WORKER_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" \
   --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=20m --cpu=2 --memory=2Gi \
-  --set-env-vars="${COMMON_ENV}" --set-secrets="${COMMON_SECRETS}" --quiet
+  --set-env-vars="${COMMON_ENV},BAROMI_AI_API_URL=${BAROMI_AI_API_URL},BAROMI_AI_MODEL=${BAROMI_AI_MODEL},BAROMI_AI_INPUT_USD_PER_MILLION=${BAROMI_AI_INPUT_USD_PER_MILLION},BAROMI_AI_OUTPUT_USD_PER_MILLION=${BAROMI_AI_OUTPUT_USD_PER_MILLION},BAROMI_AI_MAX_COST_USD=${BAROMI_AI_MAX_COST_USD}" \
+  --set-secrets="${COMMON_SECRETS}${AI_SECRET}" --quiet
 
 gcloud run jobs add-iam-policy-binding "$WORKER_JOB" \
   --project="$PROJECT_ID" --region="$REGION" --member="$API_PRINCIPAL" --role=roles/run.jobsExecutorWithOverrides --quiet >/dev/null
