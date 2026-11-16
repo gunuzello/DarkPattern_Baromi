@@ -8,6 +8,7 @@ import { db } from "../../../../src/db";
 import { stages } from "../../../../src/demo";
 import type { Stage } from "../../../../src/demo";
 import { evidenceDirectory } from "../../../../src/evidence-directory";
+import { deleteScanEvidence, readScanEvidence } from "../../../../src/object-storage";
 import { scanTarget, demoOrigin } from "../../../../src/targets";
 import { compareScans } from "../../../../src/scan-comparison";
 import type { scanDemo } from "../../../../src/scan";
@@ -21,7 +22,9 @@ import { scanStaleBefore } from "../../../../src/scan-timeout";
 import { supabaseAuthEnabled, supabaseOwner } from "../../../../src/supabase-auth";
 import { buildRuleCoverage, findingsForRuleCoverage, summarizeRuleCoverage, type RuleCoverage } from "../../../../src/rule-coverage";
 import { buildAiCandidatePayload } from "../../../../src/ai-review-payload";
+import { legalRules } from "../../../../src/legal-rules";
 import { closeCancelledScanPhases, initialScanPhases, parseScanPhases } from "../../../../src/scan-phases";
+import { cloudRunJobsEnabled, executeScanJob } from "../../../../src/cloud-run-jobs";
 
 type Context = { params: Promise<{ path: string[] }> };
 type Report = Omit<Awaited<ReturnType<typeof scanDemo>>, "scenario"> & { scenario: string; ruleCoverage?: RuleCoverage };
@@ -80,7 +83,12 @@ const rateLimit = (request: NextRequest, key: string, limit: number, windowMs: n
 };
 
 async function getReport(path: string | null): Promise<Report | null> {
-  return path ? JSON.parse(await readFile(path, "utf8")) : null;
+  if (!path) return null;
+  if (path.startsWith("db:")) {
+    const scan = await db().scan.findUnique({ where: { id: path.slice(3) }, select: { reportJson: true } });
+    return scan?.reportJson ? JSON.parse(scan.reportJson) as Report : null;
+  }
+  return JSON.parse(await readFile(path, "utf8")) as Report;
 }
 
 function serializeAiReview(review: {
@@ -95,6 +103,12 @@ function serializeAiReview(review: {
     usage: review.usageJson ? JSON.parse(review.usageJson) : null,
     operatorLabels: review.operatorLabelsJson ? JSON.parse(review.operatorLabelsJson) : null,
   } : null;
+}
+
+function ruleScreenshotRefs(report: Report, coverage: RuleCoverage, scanId: string) {
+  return Object.fromEntries(Object.entries(coverage).map(([type, rule]) => [type,
+    report.snapshots.filter((snapshot) => snapshot.screenshot && rule.evidenceIds.includes(snapshot.evidenceId ?? `evidence:${snapshot.stage}`))
+      .map((snapshot) => ({ evidenceId: snapshot.evidenceId ?? `evidence:${snapshot.stage}`, url: `/api/v1/evidences/${scanId}-${snapshot.stage}` }))]));
 }
 
 async function normalizeSpringReport(raw: Record<string, unknown>, scanId: string, ownerHash: string) {
@@ -156,7 +170,7 @@ async function normalizeSpringReport(raw: Record<string, unknown>, scanId: strin
     viewport: report.viewport ?? local?.viewport ?? raw.viewport,
     purchasePath,
     durationMs: report.durationMs ?? local?.durationMs ?? null,
-    phaseResults, coverage, surfaceCoverage, ruleCoverage, summary, findings: findingsForRuleCoverage(findings as Finding[], ruleCoverage),
+    phaseResults, coverage, surfaceCoverage, ruleCoverage, ruleScreenshotRefs: ruleScreenshotRefs(report as Report, ruleCoverage, scanId), summary, findings: findingsForRuleCoverage(findings as Finding[], ruleCoverage),
     comparison,
     aiEligible: local?.shop?.plan === "PREMIUM",
     aiReviewCandidateCount,
@@ -319,6 +333,18 @@ export async function POST(request: NextRequest, context: Context) {
       return error("최종 상태 저장소에 연결할 수 없어 진단을 시작하지 못했습니다.", 503);
     }
     await notifySpringScanStatus(scan.id, "queued");
+    if (cloudRunJobsEnabled()) {
+      try {
+        await executeScanJob(scan.id);
+      } catch (cause) {
+        console.error("Cloud Run Job dispatch failed", cause);
+        await db().scan.updateMany({
+          where: { id: scan.id, status: "QUEUED" },
+          data: { status: "FAILED", durationMs: 0, currentStage: "FAILED:WORKER_DISPATCH" },
+        }).catch(() => undefined);
+        return error("진단 작업 서버를 시작하지 못했습니다. 배포 설정을 확인해 주세요.", 503);
+      }
+    }
     return Response.json({ scanId: scan.id, status: scan.status, createdAt: scan.createdAt }, { status: 202 });
   }
 
@@ -332,18 +358,28 @@ export async function POST(request: NextRequest, context: Context) {
     });
     if (!scan?.reportPath) return notFound();
     if (scan.shop?.plan !== "PREMIUM") return error("AI 정밀 분석은 유료 플랜에서 사용자가 별도로 요청할 수 있습니다.", 402);
-    if (scan.aiReview?.status === "QUEUED" || scan.aiReview?.status === "RUNNING" || scan.aiReview?.status === "COMPLETED") {
-      return Response.json({ id: scan.aiReview.id, status: scan.aiReview.status, candidateCount: scan.aiReview.candidateCount }, { status: scan.aiReview.status === "COMPLETED" ? 200 : 202 });
-    }
+    const selected = body?.selectedRuleTypes;
+    if (!Array.isArray(selected) || !selected.length || selected.length > 16 || selected.some((type: unknown) => typeof type !== "string" || !Object.hasOwn(legalRules, type)) || new Set(selected).size !== selected.length) return error("서로 다른 진단 유형을 1~16개 선택해 주세요.", 400);
+    if (scan.aiReview?.status === "QUEUED" || scan.aiReview?.status === "RUNNING") return Response.json({ id: scan.aiReview.id, status: scan.aiReview.status }, { status: 202 });
     const report = await getReport(scan.reportPath);
-    const candidates = buildAiCandidatePayload(report as Parameters<typeof buildAiCandidatePayload>[0]);
-    if (!candidates.length) return error("AI로 전달할 검토 후보와 확인 가능한 증거가 없습니다.", 409);
+    if (!report) return error("기본 보고서를 읽을 수 없습니다.", 409);
+    const previous = scan.aiReview?.resultJson ? JSON.parse(scan.aiReview.resultJson) as { results?: { ruleType: string; status?: string }[] } : null;
+    const alreadyDone = new Set(previous?.results?.filter((item) => item.status === "COMPLETED" || item.status === "INSUFFICIENT_DATA").map((item) => item.ruleType) ?? []);
+    const pending = (selected as (keyof typeof legalRules)[]).filter((type) => !alreadyDone.has(type));
+    if (!pending.length) return Response.json({ id: scan.aiReview?.id, status: "COMPLETED", selectedRuleTypes: selected }, { status: 200 });
     const job = await db().aiReview.upsert({
       where: { scanId: id },
-      create: { id: randomUUID(), scanId: id, status: "QUEUED", candidateCount: candidates.length },
-      update: { status: "QUEUED", requestedAt: new Date(), startedAt: null, completedAt: null, resultJson: null, usageJson: null, error: null, candidateCount: candidates.length },
+      create: { id: randomUUID(), scanId: id, status: "QUEUED", candidateCount: pending.length, resultJson: JSON.stringify({ pendingRuleTypes: pending, results: [] }) },
+      update: { status: "QUEUED", requestedAt: new Date(), startedAt: null, completedAt: null, resultJson: JSON.stringify({ ...previous, pendingRuleTypes: pending, results: previous?.results ?? [] }), error: null, candidateCount: pending.length },
     });
-    return Response.json({ id: job.id, status: job.status, candidateCount: job.candidateCount }, { status: 202 });
+    if (cloudRunJobsEnabled()) {
+      try { await executeScanJob(`ai:${job.id}`); }
+      catch {
+        await db().aiReview.update({ where: { id: job.id }, data: { status: "FAILED", completedAt: new Date(), error: "AI 작업을 시작하지 못했습니다." } });
+        return error("AI 작업을 시작하지 못했습니다.", 503);
+      }
+    }
+    return Response.json({ id: job.id, status: job.status, selectedRuleTypes: pending, candidateCount: job.candidateCount }, { status: 202 });
   }
   if (resource === "scans" && id && action === "ai-review-labels" && route.length === 3) {
     const scan = await db().scan.findFirst({ where: { id, shop: { ownerHash } }, select: { aiReview: true, reportPath: true } });
@@ -503,7 +539,8 @@ export async function GET(request: NextRequest, context: Context) {
     const scan = await db().scan.findFirst({ where: { id: scanId, shop: { ownerHash } } });
     const report = await getReport(scan?.reportPath ?? null);
     if (!report?.snapshots.some((snapshot) => snapshot.stage === stage)) return notFound();
-    const png = await readFile(join(evidenceDirectory(scanId), stage + ".png")).catch(() => null);
+    const png = await readScanEvidence(scanId, stage + ".png")
+      ?? await readFile(join(evidenceDirectory(scanId), stage + ".png")).catch(() => null);
     return png ? new Response(new Uint8Array(png), {
       headers: { "Content-Type": "image/png", "Cache-Control": "private, no-store" },
     }) : notFound();
@@ -635,7 +672,7 @@ export async function GET(request: NextRequest, context: Context) {
     const response = Response.json({ ...report, viewport: scan.viewport, purchasePath: scan.purchasePath,
       durationMs: scan.durationMs,
       comparison, scanId: scan.id, shopId: scan.shopId, coverage, surfaceCoverage,
-      ruleCoverage: finalRuleCoverage, summary: finalSummary,
+      ruleCoverage: finalRuleCoverage, ruleScreenshotRefs: report && finalRuleCoverage ? ruleScreenshotRefs(report, finalRuleCoverage, scan.id) : {}, summary: finalSummary,
       aiEligible: scan.shop?.plan === "PREMIUM", aiReviewCandidateCount, aiReview,
       findings: visibleFindings });
     if (request.nextUrl.searchParams.get("download") === "1") {
@@ -676,6 +713,7 @@ export async function DELETE(request: NextRequest, context: Context) {
       } catch (cause) { return error(cause instanceof Error ? cause.message : "Spring 상태 저장소에 연결할 수 없습니다.", 503); }
     }
     if (scan) await db().scan.delete({ where: { id: scan.id } });
+    await deleteScanEvidence(id).catch((cause) => console.warn("Supabase evidence cleanup failed", cause));
     await rm(evidenceDirectory(id), { recursive: true, force: true }).catch(() => undefined);
     return Response.json({ deleted: true, scanId: id });
   }
@@ -700,7 +738,10 @@ export async function DELETE(request: NextRequest, context: Context) {
       await db().scan.deleteMany({ where: { shopId: shop.id } });
       await db().shop.delete({ where: { id: shop.id } });
     }
-    await Promise.all(deletedScanIds.map((scanId) => rm(evidenceDirectory(scanId), { recursive: true, force: true }).catch(() => undefined)));
+    await Promise.all(deletedScanIds.map(async (scanId) => {
+      await deleteScanEvidence(scanId).catch((cause) => console.warn("Supabase evidence cleanup failed", cause));
+      await rm(evidenceDirectory(scanId), { recursive: true, force: true }).catch(() => undefined);
+    }));
     return Response.json({ deleted: true, shopId: id, deletedScanCount: deletedScanIds.length });
   }
   return notFound();

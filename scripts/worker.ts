@@ -19,11 +19,10 @@ async function main() {
       if (Date.now() - lastSpringRecovery >= 30_000) {
         lastSpringRecovery = Date.now();
         await recoverSpringScans(scanStaleBefore()).catch((error) => console.warn(error instanceof Error ? error.message : error));
-        await store.$executeRaw`
-          UPDATE "AiReview" SET status = 'FAILED', completedAt = CURRENT_TIMESTAMP, error = '워커 재시작으로 작업이 만료되었습니다.'
-          WHERE status = 'RUNNING' AND startedAt IS NOT NULL
-          AND julianday("startedAt") < julianday(${scanStaleBefore().toISOString()})
-        `.catch((error) => console.warn(error instanceof Error ? error.message : error));
+        await store.aiReview.updateMany({
+          where: { status: "RUNNING", startedAt: { lt: scanStaleBefore() } },
+          data: { status: "FAILED", completedAt: new Date(), error: "워커 재시작으로 작업이 만료되었습니다." },
+        }).catch((error) => console.warn(error instanceof Error ? error.message : error));
       }
       const springJob = await claimSpringScan().catch((error) => { console.warn(error instanceof Error ? error.message : error); return null; });
       if (springJob) {
@@ -52,22 +51,32 @@ async function main() {
         continue;
       }
       // Reconcile jobs from an interrupted worker once their execution limit has passed.
-      await store.$executeRaw`
-        UPDATE "Scan" SET status = CASE WHEN "cancelRequested" THEN 'CANCELLED' ELSE 'FAILED' END
-      WHERE status = 'RUNNING' AND "startedAt" IS NOT NULL
-          AND ("cancelRequested" OR julianday("startedAt") < julianday(${scanStaleBefore().toISOString()}))
-      `;
-      const [job] = await store.$queryRaw<{ id: string; targetUrl: string; purchasePath: string; executionMode: string }[]>`
-        UPDATE "Scan" SET status = 'RUNNING', "startedAt" = CURRENT_TIMESTAMP, "durationMs" = NULL,
-          "phaseResultsJson" = CASE WHEN "phaseResultsJson" = '{}'
-            THEN CASE WHEN "purchasePath" = 'DIRECT'
-              THEN CASE WHEN "executionMode" = 'DYNAMIC' THEN ${JSON.stringify(initialScanPhases("DIRECT", true))} ELSE ${JSON.stringify(initialScanPhases("DIRECT", false))} END
-              ELSE CASE WHEN "executionMode" = 'DYNAMIC' THEN ${JSON.stringify(initialScanPhases("CART", true))} ELSE ${JSON.stringify(initialScanPhases("CART", false))} END END
-            ELSE "phaseResultsJson" END
-        WHERE id = (SELECT id FROM "Scan" WHERE status = 'QUEUED' ORDER BY "createdAt", id LIMIT 1)
-          AND NOT EXISTS (SELECT 1 FROM "Scan" WHERE status = 'RUNNING' AND "startedAt" IS NOT NULL)
-        RETURNING id, "targetUrl", "purchasePath", "executionMode"
-      `;
+      await store.scan.updateMany({
+        where: { status: "RUNNING", cancelRequested: true },
+        data: { status: "CANCELLED" },
+      });
+      await store.scan.updateMany({
+        where: { status: "RUNNING", startedAt: { lt: scanStaleBefore() } },
+        data: { status: "FAILED" },
+      });
+      const alreadyRunning = await store.scan.findFirst({ where: { status: "RUNNING", startedAt: { not: null } }, select: { id: true } });
+      const candidate = alreadyRunning ? null : await store.scan.findFirst({
+        where: { status: "QUEUED" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true, targetUrl: true, purchasePath: true, executionMode: true, phaseResultsJson: true },
+      });
+      let job: typeof candidate = null;
+      if (candidate) {
+        const purchasePath = candidate.purchasePath === "DIRECT" ? "DIRECT" : "CART";
+        const initial = initialScanPhases(purchasePath, candidate.executionMode === "DYNAMIC");
+        const claimed = await store.scan.updateMany({
+          where: { id: candidate.id, status: "QUEUED" },
+          data: {
+            status: "RUNNING", startedAt: new Date(), durationMs: null,
+            phaseResultsJson: candidate.phaseResultsJson === "{}" ? JSON.stringify(initial) : candidate.phaseResultsJson,
+          },
+        });
+        if (claimed.count) job = candidate;
+      }
       if (job) {
         const dynamicPhases = job.executionMode === "DYNAMIC";
         const purchasePath = job.purchasePath === "DIRECT" ? "DIRECT" : "CART";
@@ -80,13 +89,13 @@ async function main() {
           },
         }).catch((error) => console.error(job.id, error));
       } else {
-        const [aiJob] = await store.$queryRaw<{ id: string }[]>`
-          UPDATE "AiReview" SET status = 'RUNNING', "startedAt" = CURRENT_TIMESTAMP, error = NULL
-          WHERE id = (SELECT id FROM "AiReview" WHERE status = 'QUEUED' ORDER BY "requestedAt", id LIMIT 1)
-            AND NOT EXISTS (SELECT 1 FROM "AiReview" WHERE status = 'RUNNING')
-          RETURNING id
-        `;
-        if (aiJob) await runAiReviewJob(aiJob.id).catch((error) => console.error(aiJob.id, error));
+        const activeAi = await store.aiReview.findFirst({ where: { status: "RUNNING" }, select: { id: true } });
+        const candidateAi = activeAi ? null : await store.aiReview.findFirst({ where: { status: "QUEUED" }, orderBy: [{ requestedAt: "asc" }, { id: "asc" }], select: { id: true } });
+        const claimedAi = candidateAi ? await store.aiReview.updateMany({
+          where: { id: candidateAi.id, status: "QUEUED" },
+          data: { status: "RUNNING", startedAt: new Date(), error: null },
+        }) : { count: 0 };
+        if (candidateAi && claimedAi.count) await runAiReviewJob(candidateAi.id).catch((error) => console.error(candidateAi.id, error));
         else await delay(500);
       }
     }

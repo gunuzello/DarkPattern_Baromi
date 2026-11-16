@@ -2,6 +2,7 @@ import "dotenv/config";
 import { rm } from "node:fs/promises";
 import { db } from "../src/db";
 import { evidenceDirectory } from "../src/evidence-directory";
+import { deleteScanEvidence } from "../src/object-storage";
 
 const days = Number(process.env.RETENTION_DAYS ?? 30);
 if (!Number.isInteger(days) || days < 1 || days > 3650) throw new Error("RETENTION_DAYS must be an integer from 1 to 3650");
@@ -17,6 +18,7 @@ async function main() {
   for (const scan of scans) {
     if (!dryRun) {
       await database.scan.delete({ where: { id: scan.id } });
+      await deleteScanEvidence(scan.id).catch((error) => console.warn("Supabase evidence cleanup failed", error));
       await rm(evidenceDirectory(scan.id), { recursive: true, force: true }).catch(() => undefined);
     }
   }

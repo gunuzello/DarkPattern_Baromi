@@ -28,6 +28,7 @@ model Scan {
   status          String
   createdAt       DateTime  @default(now())
   reportPath      String?
+  reportJson      String?
   shopId          String?
   shop            Shop?     @relation(fields: [shopId], references: [id])
   startedAt       DateTime?

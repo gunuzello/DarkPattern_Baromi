@@ -12,12 +12,9 @@ async function main() {
   const id = randomUUID();
   const targetUrl = demoTarget(scenario);
   try {
-    const claimed = await store.$executeRaw`
-      INSERT INTO "Scan" (id, scenario, "targetUrl", status, "startedAt")
-      SELECT ${id}, ${scenario}, ${targetUrl}, 'RUNNING', CURRENT_TIMESTAMP
-      WHERE NOT EXISTS (SELECT 1 FROM "Scan" WHERE status = 'RUNNING' AND "startedAt" IS NOT NULL)
-    `;
-    if (!claimed) throw new Error("진행 중인 진단이 있습니다. 완료 후 다시 시도하세요.");
+    const running = await store.scan.findFirst({ where: { status: "RUNNING", startedAt: { not: null } }, select: { id: true } });
+    if (running) throw new Error("진행 중인 진단이 있습니다. 완료 후 다시 시도하세요.");
+    await store.scan.create({ data: { id, scenario, targetUrl, status: "RUNNING", startedAt: new Date() } });
     console.log(await runScanJob(id, targetUrl));
   } finally {
     await store.$disconnect();

@@ -253,13 +253,15 @@
 
 ### `POST /api/v1/scans/:scanId/ai-review`
 
-유료 플랜에서 기본 보고서 생성 후 사용자가 명시적으로 요청한다. 실제 증거 ID로 연결되는 `AI_CONTEXT` 후보만 AI 검토 대상으로 센다. 유형 없는 메모와 `BASIC_ENGINE` 유형은 provider로 보내지 않는다. 연결된 스냅샷·크롤링 페이지·표면 관찰이 없으면 `409`와 `AI로 전달할 검토 후보와 확인 가능한 증거가 없습니다.`를 반환한다. 응답 `202`:
+기본 보고서 생성 후 유료 권한이 있는 소유자가 요청한다. `ruleCoverage`의 16개 유형을 모두 선택할 수 있다. `aiReviewCandidateCount`는 이전 검토 후보의 참고값이며 선택 가능 유형을 제한하지 않는다.
 
-```json
-{ "id": "uuid", "status": "QUEUED", "candidateCount": 6 }
-```
+서버 작업 환경에는 `BAROMI_AI_API_URL`, `BAROMI_AI_API_KEY`, `BAROMI_AI_MODEL`이 필요하다. 예상 비용 제한을 사용하려면 `BAROMI_AI_INPUT_USD_PER_MILLION`, `BAROMI_AI_OUTPUT_USD_PER_MILLION`, `BAROMI_AI_MAX_COST_USD`를 함께 설정한다. API 키는 프론트에 전달하지 않는다. 현재 모델 입력은 정리된 텍스트·구조화 증거이며, 스크린샷은 보고서 참조로만 제공한다.
 
-`aiReviewCandidateCount`는 보고서의 일반 검토 메모를 제외하고, 유료 AI에 실제 전달 가능한 근거 연결 `AI_CONTEXT` 후보 수다. 프론트는 요청 버튼 조건을 `aiEligible && aiReviewCandidateCount > 0`으로 둘 수 있다. `POST`의 `candidateCount`는 해당 작업에 고정된 후보 수다. 같은 요청을 다시 보내면 기존 `QUEUED|RUNNING|COMPLETED` 작업 ID와 현재 후보 수를 돌려준다. 이후 `GET /api/v1/scans/:scanId/report`를 조회해 `aiReview.status`가 `QUEUED → RUNNING → COMPLETED|FAILED`로 끝나는지 확인한다. 완료 응답은 `aiReview.result.decisions[]`에 `candidateId`, `label`, `confidence`, `rationale`, `suggestedRule`을, `aiReview.usage`에 토큰·비용을 담는다. AI 검토 상태와 결과는 `ruleCoverage`와 기본 `findings`를 변경하지 않는다.
+요청: `{ "selectedRuleTypes": ["PRESELECTION", "DRIP_PRICING"] }`. 빈 배열, 중복, 미등록 유형, 16개 초과는 400이다. 현재 작업이 실행 중이면 기존 작업 ID를 반환한다. 완료된 유형만 재요청하면 기존 결과를 반환하고, 새로운 유형을 추가하면 이전 항목 결과를 보존하고 새 유형만 분석한다.
+
+응답 `202`: `{ "id": "uuid", "status": "QUEUED", "selectedRuleTypes": ["PRESELECTION", "DRIP_PRICING"], "candidateCount": 2 }`.
+
+`GET /api/v1/scans/:scanId/report`의 `aiReview.status`는 `QUEUED → RUNNING → COMPLETED | FAILED`이다. `aiReview.result.results[]`는 선택한 유형별 `ruleType`, `status`, `verdict`, `summary`, `reason`, `observedFacts`, `evidenceIds`, `recommendations`, `limitations`, `baselineStatus`를 제공한다. 항목 `status`는 `COMPLETED | INSUFFICIENT_DATA | FAILED`이며, 완료된 항목의 `verdict`는 `SAFE | PARTIALLY_SAFE | RISK` 중 하나다. 근거가 없는 항목은 AI를 호출하지 않고 `INSUFFICIENT_DATA`를 반환한다. 선택하지 않은 유형에는 AI 결과가 없다. 기존 기본 보고서의 `ruleCoverage`와 `findings`는 변경되지 않는다. 보고서의 `ruleScreenshotRefs[ruleType][]`는 해당 항목의 `evidenceId`와 기존 소유권 보호 이미지 조회 `url`을 연결한다. 배열이 비어 있으면 이미지를 표시하지 않는다.
 
 ### `POST /api/v1/scans/:scanId/ai-review-labels`
 

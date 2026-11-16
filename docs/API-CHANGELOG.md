@@ -4,6 +4,14 @@
 
 ## 2026-11-17
 
+### 사용자가 선택한 16개 유형의 AI 정밀 분석 계약
+
+- 변경: 유료 소유자가 `POST /api/v1/scans/:scanId/ai-review`에 `selectedRuleTypes`를 보내면 기본 판정 상태와 관계없이 해당 유형을 분석한다. 근거가 없으면 AI 호출 없이 `INSUFFICIENT_DATA`로 남긴다.
+- 변경: 완료 항목의 AI 판정은 `SAFE`, `PARTIALLY_SAFE`, `RISK`이며, 항목별 `status`와 분리한다. 기본 보고서 판정은 변경하지 않는다. 재요청 시 기존 완료 결과를 보존한다.
+- 프론트 영향: `aiReviewCandidateCount`로 선택 가능 여부를 제한하지 않는다. `ruleCoverage`의 16개 유형을 선택 목록으로 사용하고 `aiReview.result.results[]`와 `ruleScreenshotRefs`를 표시한다.
+- 관련 endpoint: `POST /api/v1/scans/:scanId/ai-review`, `GET /api/v1/scans/:scanId/report`.
+- 검증: 타입 검사와 선택 증거·개인정보 가림 테스트 2개 통과. 실제 유료 모델 호출 및 운영 배포는 미실행.
+
 ### 크롤링 진행 현황을 구조화해 제공
 
 - 변경: `GET /api/v1/scans/:scanId`의 `phaseResults.site-crawl.activity`에 확인·발견·대기 화면 수, 고유 URL 수, 마지막 갱신 시각을 추가했다.

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { evidenceDirectory } from "./evidence-directory";
+import { persistScanEvidence } from "./object-storage";
 import { db } from "./db";
 import { scanDemo } from "./scan";
 import { scanPublicShop } from "./public-scan";
@@ -209,13 +210,16 @@ export async function runScanJob(id: string, targetUrl: string, callbacks: ScanJ
         }
       }
       report = { ...report, phaseResults: phases, ruleCoverage: buildRuleCoverage(report) };
+      await persistScanEvidence(id, directory);
       await writeFile(join(directory, "report.json"), JSON.stringify(report, null, 2) + "\n");
+      const reportJson = JSON.stringify(report);
       const finished = await store.scan.update({
         where: { id, status: "RUNNING", cancelRequested: false },
         data: {
           status: report.scanStatus,
           durationMs: Date.now() - startedAt,
-          reportPath: join(directory, "report.json"),
+          reportPath: process.env.BAROMI_REPORT_STORAGE === "postgres" ? `db:${id}` : join(directory, "report.json"),
+          reportJson,
           findings: { create: report.findings.map(({ type, status, stage, reason, ruleVersion }: { type: string; status: string; stage: string; reason: string; ruleVersion: number }) => ({
             type, status, stage, reason, ruleVersion,
           })) },
@@ -291,10 +295,12 @@ export async function runScanJob(id: string, targetUrl: string, callbacks: ScanJ
       failedReportForMirror = JSON.stringify(failedReport);
       await mkdir(evidenceDirectory(id), { recursive: true });
       await writeFile(reportPath, JSON.stringify(failedReport, null, 2) + "\n");
+      await persistScanEvidence(id, evidenceDirectory(id)).catch(() => undefined);
       await store.scan.updateMany({ where: { id, status: "RUNNING" }, data: {
         status: "FAILED", durationMs: Date.now() - startedAt,
         phaseResultsJson: JSON.stringify(phases), currentStage: `FAILED:${message.slice(0, 160)}`,
-        reportPath,
+        reportPath: process.env.BAROMI_REPORT_STORAGE === "postgres" ? `db:${id}` : reportPath,
+        reportJson: JSON.stringify(failedReport),
       } });
     } else {
       await store.scan.updateMany({ where: { id, status: "RUNNING" }, data: { status: "FAILED", durationMs: Date.now() - startedAt } });

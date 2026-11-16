@@ -7,6 +7,33 @@ import { decryptCredentials, encryptCredentials } from "../src/credential-vault"
 import { buildAiCandidatePayload, restoreAiCandidateIds, toAiProviderCandidates } from "../src/ai-review-payload";
 import { collectRuleReviewCandidates } from "../src/review-candidates";
 
+test("AI 선택 항목은 기본 판정 종류와 관계없이 증거가 있을 때만 전송한다", () => {
+  const report = {
+    snapshots: [{ evidenceId: "evidence:product", stage: "product", textLines: ["유료 옵션이 선택되어 있습니다."] }],
+    ruleCoverage: {
+      PRESELECTION: { status: "SUSPECTED", reason: "초기 선택", evidenceIds: ["evidence:product"] },
+      HIDDEN_SUBSCRIPTION: { status: "NOT_TESTED", reason: "구독 화면 미도달", evidenceIds: [] },
+    },
+  } as unknown as Parameters<typeof buildAiCandidatePayload>[0];
+  const result = buildAiCandidatePayload(report, ["PRESELECTION", "HIDDEN_SUBSCRIPTION"]);
+  expect(result.map((item) => item.ruleType)).toEqual(["PRESELECTION"]);
+  expect(result[0].evidence.map((item) => item.evidenceId)).toEqual(["evidence:product"]);
+});
+
+test("AI 증거는 상호작용을 우선하고 비밀번호를 가린다", () => {
+  const snapshots = Array.from({ length: 9 }, (_, index) => ({ evidenceId: `snapshot:${index}`, stage: "product", textLines: ["password: secret123!"] }));
+  const report = {
+    snapshots,
+    interactions: [{ id: "interaction:choice", stage: "checkout", kind: "PAID_OPTION_TOGGLE", outcome: "OBSERVED", controlLabel: "거절" }],
+    ruleCoverage: { PRESELECTION: { status: "SUSPECTED", reason: "초기 선택", evidenceIds: [...snapshots.map((item) => item.evidenceId), "interaction:choice"] } },
+  } as unknown as Parameters<typeof buildAiCandidatePayload>[0];
+  const [candidate] = buildAiCandidatePayload(report, ["PRESELECTION"]);
+  expect(candidate.evidence).toHaveLength(8);
+  expect(candidate.evidence[0].evidenceId).toBe("interaction:choice");
+  expect(JSON.stringify(toAiProviderCandidates([candidate]))).not.toContain("secret123!");
+  expect(candidate.inspectionScope?.length).toBeLessThanOrEqual(10);
+});
+
 test("테스트 계정은 암호화된 일회성 값으로만 보관한다", () => {
   process.env.BAROMI_CREDENTIAL_KEY = Buffer.alloc(32, 7).toString("base64");
   const ciphertext = encryptCredentials({ username: "test-user", password: "secret-password" });

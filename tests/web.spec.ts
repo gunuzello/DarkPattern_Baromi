@@ -105,13 +105,11 @@ test("웹에서 진단하고 증거를 확인한 후 같은 조건으로 재진�
     request.on("end", () => {
       const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { input?: { role: string; content: string }[] };
       const prompt = body.input?.find((item) => item.role === "user")?.content ?? "{}";
-      const candidates = (JSON.parse(prompt) as { candidates?: { id: string; ruleType?: string }[] }).candidates ?? [];
-      const decisions = candidates.map((candidate) => ({
-        candidateId: candidate.id, label: "NEEDS_REVIEW", confidence: 0.9,
-        rationale: "테스트 AI 제공자가 반환한 구조화 결과입니다.", suggestedRule: candidate.ruleType ?? null,
-      }));
+      const candidate = (JSON.parse(prompt) as { candidate: { evidence: { evidenceId: string }[] } }).candidate;
+      const result = { verdict: "RISK", summary: "선택된 항목의 위험 신호", reason: "근거가 연결되어 있습니다.",
+        observedFacts: ["화면에서 확인됨"], evidenceIds: [candidate.evidence[0].evidenceId], recommendations: ["선택 상태를 고쳐주세요."], limitations: [] };
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({ output_text: JSON.stringify({ decisions }), usage: { input_tokens: 120, output_tokens: 80 } }));
+      response.end(JSON.stringify({ output_text: JSON.stringify(result), usage: { input_tokens: 120, output_tokens: 80 } }));
     });
   });
   await new Promise<void>((resolve) => aiProvider!.listen(0, "127.0.0.1", resolve));
@@ -165,12 +163,12 @@ test("웹에서 진단하고 증거를 확인한 후 같은 조건으로 재진�
   expect(viewedReport.ruleCoverage).toEqual(downloadedReport.ruleCoverage);
   expect(viewedReport.phaseResults).toEqual(downloadedReport.phaseResults);
   expect(viewedReport.reviewCandidates).toEqual(downloadedReport.reviewCandidates);
-  expect((await page.request.post(origin + "/api/v1/scans/" + baselineScanId + "/ai-review", { data: {} })).status()).toBe(402);
+  expect((await page.request.post(origin + "/api/v1/scans/" + baselineScanId + "/ai-review", { data: { selectedRuleTypes: ["PRESELECTION"] } })).status()).toBe(402);
   execFileSync("npx", ["prisma", "db", "execute", "--stdin"], {
     cwd: process.cwd(), env: process.env,
     input: `UPDATE "Shop" SET plan = 'PREMIUM' WHERE id = '${downloadedReport.shopId}';`,
   });
-  const aiRequest = await page.request.post(origin + "/api/v1/scans/" + baselineScanId + "/ai-review", { data: {} });
+  const aiRequest = await page.request.post(origin + "/api/v1/scans/" + baselineScanId + "/ai-review", { data: { selectedRuleTypes: ["PRESELECTION", "HIDDEN_SUBSCRIPTION"] } });
   expect(aiRequest.status()).toBe(202);
   expect(await aiRequest.json()).toMatchObject({ status: "QUEUED", candidateCount: expect.any(Number) });
   await expect.poll(async () => {
@@ -178,8 +176,7 @@ test("웹에서 진단하고 증거를 확인한 후 같은 조건으로 재진�
     return (await response.json()).aiReview?.status;
   }, { timeout: 15_000 }).toBe("COMPLETED");
   const reviewedReport = await (await page.request.get(origin + "/api/v1/scans/" + baselineScanId + "/report")).json();
-  expect(reviewedReport.aiReview.result.decisions.length).toBeGreaterThan(0);
-  expect(reviewedReport.aiReview.usage).toMatchObject({ inputTokens: 120, outputTokens: 80 });
+  expect(reviewedReport.aiReview.result.results).toEqual(expect.arrayContaining([expect.objectContaining({ ruleType: "PRESELECTION", verdict: "RISK" })]));
   expect(reviewedReport.ruleCoverage.PRESELECTION).toEqual(downloadedReport.ruleCoverage.PRESELECTION);
   const differentShop = await page.request.post(origin + "/api/v1/shops", {
     data: { url: riskyUrl, consent: true },

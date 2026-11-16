@@ -11,12 +11,15 @@
     "build": "next build",
     "typecheck": "tsc --noEmit",
     "db:setup": "prisma migrate deploy",
+    "db:setup:postgres": "PRISMA_PROVIDER=postgresql prisma migrate deploy",
+    "db:generate:all": "prisma generate && PRISMA_PROVIDER=postgresql prisma generate",
     "scan": "tsx scripts/scan.ts",
     "smoke:external-login": "tsx scripts/external-login-smoke.ts",
     "scan:external": "tsx scripts/external-scan.ts",
     "test": "playwright test",
-    "postinstall": "prisma generate",
+    "postinstall": "npm run db:generate:all",
     "worker": "tsx scripts/worker.ts",
+    "worker:job": "tsx scripts/cloud-run-job.ts",
     "cleanup:retention": "tsx scripts/cleanup-retention.ts",
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts",
@@ -30,22 +33,26 @@
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "7.10.1",
+    "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "7.10.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
     "dotenv": "18.0.10",
+    "google-auth-library": "^11.3.4",
     "next": "16.4.6",
+    "pg": "^8.23.1",
     "playwright": "1.65.0",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
     "@types/node": "22.20.5",
+    "@types/pg": "^8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "prisma": "7.10.1",
-    "tsx": "4.23.15",
     "typescript": "5.9.3"
   }
 }

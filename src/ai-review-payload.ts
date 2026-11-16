@@ -2,8 +2,11 @@ import type { CrawledSitePage } from "./site-crawler";
 import type { SurfaceObservation } from "./purchase-journey";
 import type { InteractionEvidence } from "./rules";
 import { contextualRuleTypes } from "./rule-strategy";
+import { legalRules } from "./legal-rules";
+import { ruleDecisionCriteria } from "./rule-strategy";
+import type { RuleCoverage } from "./rule-coverage";
 
-export type ReviewCandidate = { id: string; kind: string; stage: string; text: string; reason: string; evidenceIds: string[]; ruleType?: string; observedFacts?: string[]; missingInformation?: string[] };
+export type ReviewCandidate = { id: string; kind: string; stage: string; text: string; reason: string; evidenceIds: string[]; ruleType?: string; baselineStatus?: string; decisionCriteria?: string; observedFacts?: string[]; missingInformation?: string[]; inspectionScope?: string[]; counterEvidence?: string[] };
 export type SnapshotEvidence = { evidenceId?: string; stage?: string; url?: string; priceLines?: string[]; textLines?: string[]; options?: unknown[]; fees?: unknown[]; precheckedSignals?: unknown[]; surfaceSignals?: unknown[]; decisionControls?: unknown[] };
 export type ReviewEvidence = {
   evidenceId: string;
@@ -27,6 +30,7 @@ export type AiCandidatePayload = ReviewCandidate & { evidence: ReviewEvidence[] 
 export type AiProviderCandidate = Omit<ReviewCandidate, "evidenceIds"> & { evidence: (Omit<ReviewEvidence, "evidenceId"> & { evidenceId: string })[] };
 
 const redact = (value: string) => value
+  .replace(/((?:비밀번호|password|passwd|api[_ -]?key|access[_ -]?token|authorization|cookie)\s*[:=]\s*)\S+/gi, "$1[민감정보 가림]")
   .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "[이메일 가림]")
   .replace(/(?:\+?82[- ]?)?0?1[016789][- ]?\d{3,4}[- ]?\d{4}/g, "[연락처 가림]")
   .replace(/\b\d{6}[- ]?[1-4]\d{6}\b/g, "[식별번호 가림]");
@@ -89,8 +93,9 @@ function crawlEvidence(item: CrawledSitePage, candidate: ReviewCandidate): Revie
   });
   const selectedControls = item.interactives.filter((control) => control.selected === true)
     .map(({ label }) => redact(label).slice(0, 300)).filter(Boolean).slice(0, 20);
-  const matchingVisualFacts = candidate.kind === "VISUAL_ACCESSIBILITY" || candidate.kind === "SEMANTIC_REVIEW"
-    ? item.domText.filter((entry) => entry.visible && (facts.length ? matchesFact(entry.text) : candidate.kind === "VISUAL_ACCESSIBILITY" || candidate.kind === "SEMANTIC_REVIEW"))
+  const needsVisualFacts = candidate.kind === "VISUAL_ACCESSIBILITY" || ["MISDIRECTED_HIERARCHY", "HIDDEN_INFO", "DISGUISED_AD"].includes(candidate.ruleType ?? "");
+  const matchingVisualFacts = needsVisualFacts
+    ? item.domText.filter((entry) => entry.visible && (facts.length ? matchesFact(entry.text) : Boolean(entry.interactive)))
       .slice(0, 12).map(({ text, fontSize, color, opacity, bounds }) => ({ text: redact(text).slice(0, 300), fontSize, color, opacity, bounds: { width: bounds.width, height: bounds.height } }))
     : undefined;
   const text = item.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -116,7 +121,7 @@ export function buildAiCandidatePayload(report: {
   interactions?: readonly InteractionEvidence[];
   siteCrawl?: { pages?: readonly CrawledSitePage[] };
   surfaceObservations?: readonly SurfaceObservation[];
-}): AiCandidatePayload[] {
+}, selectedRuleTypes?: readonly (keyof typeof legalRules)[]): AiCandidatePayload[] {
   const evidenceById = new Map<string, ReviewEvidence>();
   for (const item of report.snapshots ?? []) {
     const evidence = snapshotEvidence(item);
@@ -134,13 +139,37 @@ export function buildAiCandidatePayload(report: {
   for (const item of report.siteCrawl?.pages ?? []) evidenceById.set(item.evidenceId, { evidenceId: item.evidenceId, source: "crawl_page" });
   for (const item of report.surfaceObservations ?? []) evidenceById.set(item.evidenceId, surfaceEvidence(item));
 
-  // Untyped operator notes and BASIC_ENGINE rules remain visible in the
-  // report/dataset, but only the eight explicitly contextual rules may reach
-  // the paid AI provider.
-  return (report.reviewCandidates ?? []).filter((item) =>
-    item.ruleType && contextualRuleTypes.includes(item.ruleType as (typeof contextualRuleTypes)[number]),
+  // The default review queue remains contextual; an explicit user selection
+  // may revisit any of the sixteen rules.
+  const coverage = (report as typeof report & { ruleCoverage?: RuleCoverage }).ruleCoverage;
+  const selected = selectedRuleTypes ? selectedRuleTypes.map((type) => {
+    const rule = coverage?.[type];
+    const related = (report.reviewCandidates ?? []).filter((item) => item.ruleType === type);
+    return {
+      id: `rule:${type}`, kind: "RULE_REVIEW", stage: "report", ruleType: type,
+      text: rule?.reason ?? "검사 기록이 없습니다.", reason: rule?.reason ?? "검사 기록이 없습니다.",
+      baselineStatus: rule?.status ?? "NOT_TESTED", decisionCriteria: ruleDecisionCriteria[type],
+      evidenceIds: [...new Set([...(rule?.evidenceIds ?? []), ...related.flatMap((item) => item.evidenceIds)])],
+      observedFacts: related.flatMap((item) => item.observedFacts ?? []),
+      missingInformation: related.flatMap((item) => item.missingInformation ?? []),
+      inspectionScope: [...new Set([...(rule?.evidenceIds ?? []), ...related.flatMap((item) => item.evidenceIds)])]
+        .map((id) => evidenceById.get(id)).filter((item): item is ReviewEvidence => Boolean(item))
+        .map((item) => [item.stage ?? item.source, item.url, item.outcome].filter(Boolean).join(" · ")),
+      counterEvidence: rule?.status === "NOT_OBSERVED" ? [rule.reason] : [],
+    };
+  }) : report.reviewCandidates ?? [];
+  return selected.filter((item) =>
+    selectedRuleTypes ? true : Boolean(item.ruleType && contextualRuleTypes.includes(item.ruleType as (typeof contextualRuleTypes)[number])),
   ).slice(0, 40).flatMap((item) => {
-    const evidence = item.evidenceIds.slice(0, 4).flatMap((id) => {
+    const rankedIds = [...new Set(item.evidenceIds)].filter((id) => evidenceById.has(id))
+      .sort((a, b) => {
+        const rank = (id: string) => {
+          const source = evidenceById.get(id)?.source;
+          return source === "interaction" ? 0 : source === "snapshot" ? 1 : source === "surface_observation" ? 2 : 3;
+        };
+        return rank(a) - rank(b);
+      });
+    const evidence = rankedIds.slice(0, 8).flatMap((id) => {
       const resolved = evidenceById.get(id);
       if (!resolved) return [];
       if (resolved.source === "crawl_page") {
@@ -152,7 +181,9 @@ export function buildAiCandidatePayload(report: {
     if (!evidence.length) return [];
     return [{ ...item, text: redact(item.text).slice(0, 1_000), reason: redact(item.reason).slice(0, 500),
       observedFacts: item.observedFacts?.slice(0, 12).map((fact) => redact(fact).slice(0, 300)),
-      missingInformation: item.missingInformation?.slice(0, 8).map((fact) => redact(fact).slice(0, 300)), evidence }];
+      missingInformation: item.missingInformation?.slice(0, 8).map((fact) => redact(fact).slice(0, 300)),
+      inspectionScope: item.inspectionScope?.slice(0, 8).map((fact) => redact(fact).slice(0, 300)),
+      counterEvidence: item.counterEvidence?.slice(0, 8).map((fact) => redact(fact).slice(0, 300)), evidence }];
   });
 }
 
