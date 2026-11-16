@@ -47,7 +47,7 @@ export function WaitlistForm() {
     );
   }
 
-  const mailto = `mailto:${CONTACT}?subject=${encodeURIComponent("AI 정밀 분석 출시 소식 신청")}&body=${encodeURIComponent(`출시 소식 받을 주소: ${email}`)}`;
+  const mailto = `mailto:${CONTACT}?subject=${encodeURIComponent("AI 정밀 점검 출시 소식 신청")}&body=${encodeURIComponent(`출시 소식 받을 주소: ${email}`)}`;
 
   return (
     <form className="waitlist" onSubmit={submit} noValidate={false}>
