@@ -154,7 +154,7 @@ export type Comparison =
 export type OperatorLabel = "LIKELY_RISK" | "NEEDS_REVIEW" | "LIKELY_BENIGN" | "INSUFFICIENT_EVIDENCE";
 export type AiReview = {
   id: string;
-  status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED";
+  status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
   model?: string | null;
   candidateCount: number;
   durationMs?: number | null;

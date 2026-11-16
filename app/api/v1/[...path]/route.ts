@@ -390,8 +390,8 @@ export async function POST(request: NextRequest, context: Context) {
     if (!pending.length) return Response.json({ id: scan.aiReview?.id, status: "COMPLETED", selectedRuleTypes: selected }, { status: 200 });
     const job = await db().aiReview.upsert({
       where: { scanId: id },
-      create: { id: randomUUID(), scanId: id, status: "QUEUED", candidateCount: pending.length, resultJson: JSON.stringify({ pendingRuleTypes: pending, results: [] }) },
-      update: { status: "QUEUED", requestedAt: new Date(), startedAt: null, completedAt: null, resultJson: JSON.stringify({ ...previous, pendingRuleTypes: pending, results: previous?.results ?? [] }), error: null, candidateCount: pending.length },
+      create: { id: randomUUID(), scanId: id, status: "QUEUED", candidateCount: pending.length, resultJson: JSON.stringify({ selectedRuleTypes: pending, pendingRuleTypes: pending, results: [] }) },
+      update: { status: "QUEUED", requestedAt: new Date(), startedAt: null, completedAt: null, resultJson: JSON.stringify({ ...previous, selectedRuleTypes: pending, pendingRuleTypes: pending, results: previous?.results ?? [] }), error: null, candidateCount: pending.length },
     });
     if (cloudRunJobsEnabled()) {
       try { await executeScanJob(`ai:${job.id}`); }
@@ -778,7 +778,25 @@ export async function DELETE(request: NextRequest, context: Context) {
   }
   if (!session) return supabaseAuthEnabled() ? error("로그인이 필요합니다.", 401) : notFound();
   const ownerHash = hash(session);
-  const [resource, id] = route.path;
+  const [resource, id, action] = route.path;
+  if (resource === "scans" && id && action === "ai-review" && route.path.length === 3) {
+    const scan = await db().scan.findFirst({
+      where: { id, shop: { ownerHash } },
+      select: { aiReview: { select: { id: true, status: true } } },
+    });
+    if (!scan?.aiReview) return notFound();
+    const review = scan.aiReview;
+    if (review.status !== "QUEUED" && review.status !== "RUNNING") {
+      return error("중단할 AI 분석이 없습니다.", 409);
+    }
+    const cancelled = await db().aiReview.updateMany({
+      where: { id: review.id, status: { in: ["QUEUED", "RUNNING"] } },
+      data: { status: "CANCELLED", completedAt: new Date(), error: "사용자가 AI 분석을 중단했습니다." },
+    });
+    const latest = cancelled.count ? null : await db().aiReview.findUnique({ where: { id: review.id }, select: { status: true } });
+    if (!cancelled.count && latest?.status !== "CANCELLED") return error("AI 분석이 이미 종료됐습니다.", 409);
+    return Response.json({ id: review.id, status: "CANCELLED" });
+  }
   if (!id || route.path.length !== 2) return notFound();
   if (resource === "scans") {
     const scan = await db().scan.findFirst({ where: { id, shop: { ownerHash } }, select: { id: true, status: true } });

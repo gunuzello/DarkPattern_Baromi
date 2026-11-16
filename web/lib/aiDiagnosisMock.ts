@@ -138,3 +138,8 @@ export async function requestDiagnosis(scanId: string, types: FindingType[]): Pr
   }
   return compose(scanId, stored);
 }
+
+export async function cancelDiagnosis(scanId: string): Promise<void> {
+  memory.delete(scanId);
+  try { window.sessionStorage.removeItem(key(scanId)); } catch { /* ignore unavailable storage */ }
+}

@@ -5,6 +5,7 @@ import { buildAiCandidatePayload, toAiProviderCandidates } from "./ai-review-pay
 import { legalRules } from "./legal-rules";
 import { aiRuleRubrics } from "./ai-rule-rubrics";
 import { extractAiOutputText, extractAiTokenUsage } from "./ai-provider";
+import { setTimeout as delay } from "node:timers/promises";
 export { buildAiCandidatePayload } from "./ai-review-payload";
 export { extractAiOutputText, extractAiTokenUsage } from "./ai-provider";
 
@@ -31,6 +32,7 @@ export async function runAiReviewJob(id: string) {
   try {
     const job = await store.aiReview.findUnique({ where: { id }, include: { scan: { select: { reportPath: true, reportJson: true } } } });
     if (!job?.scan.reportPath) throw new Error("기본 진단 보고서가 없습니다.");
+    if (job.status === "CANCELLED") return;
     if (job.usageJson) usage.push(...JSON.parse(job.usageJson) as ReturnType<typeof estimateAiUsage>[]);
     const saved = job.resultJson ? JSON.parse(job.resultJson) as { pendingRuleTypes?: string[]; results?: unknown[] } : {};
     const selected = (saved.pendingRuleTypes ?? []).filter((type): type is keyof typeof legalRules => Object.hasOwn(legalRules, type));
@@ -45,6 +47,8 @@ export async function runAiReviewJob(id: string) {
     const results: Record<string, unknown>[] = ((saved.results ?? []) as Record<string, unknown>[])
       .filter((item) => !selected.includes(String(item.ruleType) as keyof typeof legalRules));
     for (const ruleType of selected) {
+      const current = await store.aiReview.findUnique({ where: { id }, select: { status: true } });
+      if (!current || current.status === "CANCELLED") return;
       const candidate = candidates.find((item) => item.ruleType === ruleType);
       if (!candidate) {
         results.push({ ruleType, status: "INSUFFICIENT_DATA", reason: "연결된 검사 근거가 없어 AI를 호출하지 않았습니다." });
@@ -79,11 +83,33 @@ export async function runAiReviewJob(id: string) {
         const projected = estimateAiUsage({ provider: new URL(endpoint).hostname, model, purpose: "selected-rule-review", inputTokens: estimatedInputTokens, outputTokens: 1200 });
         if (exceedsAiCostCap({ ...projected, estimatedCostUsd: projected.estimatedCostUsd + usage.reduce((sum, item) => sum + item.estimatedCostUsd, 0) })) throw new Error("AI 비용 상한 예상치를 초과했습니다.");
         const requestUrl = gemini ? `${endpoint.replace(/\/$/, "")}/models/${encodeURIComponent(model)}:generateContent` : endpoint;
-        const response = await fetch(requestUrl, {
-          method: "POST", signal: AbortSignal.timeout(60_000),
-          headers: gemini ? { "x-goog-api-key": apiKey, "content-type": "application/json" } : { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-          body: JSON.stringify(input),
-        });
+        const controller = new AbortController();
+        let monitoring = true;
+        const cancellationMonitor = (async () => {
+          while (monitoring) {
+            await delay(500);
+            const latest = await store.aiReview.findUnique({ where: { id }, select: { status: true } }).catch(() => null);
+            if (!latest || latest.status === "CANCELLED") {
+              controller.abort(new Error("AI 분석이 중단되었습니다."));
+              break;
+            }
+          }
+        })();
+        const timeout = setTimeout(() => controller.abort(new Error("AI 제공자 응답 시간 초과")), 60_000);
+        let response: Response;
+        try {
+          response = await fetch(requestUrl, {
+            method: "POST", signal: controller.signal,
+            headers: gemini ? { "x-goog-api-key": apiKey, "content-type": "application/json" } : { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+            body: JSON.stringify(input),
+          });
+        } finally {
+          monitoring = false;
+          clearTimeout(timeout);
+          await cancellationMonitor;
+        }
+        const afterRequest = await store.aiReview.findUnique({ where: { id }, select: { status: true } });
+        if (!afterRequest || afterRequest.status === "CANCELLED") return;
         if (!response.ok) throw new Error(`AI 제공자 응답 실패(${response.status})`);
         const body = await response.json();
         const tokenUsage = extractAiTokenUsage(body);
@@ -109,8 +135,14 @@ export async function runAiReviewJob(id: string) {
           limitations: value.limitations.slice(0, 8).map((item) => item.slice(0, 300)),
           baselineStatus: (report as typeof report & { ruleCoverage?: Record<string, { status?: string }> }).ruleCoverage?.[ruleType]?.status ?? "NOT_TESTED" });
       } catch (error) {
+        const latest = await store.aiReview.findUnique({ where: { id }, select: { status: true } }).catch(() => null);
+        if (!latest || latest.status === "CANCELLED") return;
         results.push({ ruleType, status: "FAILED", reason: error instanceof Error ? error.message.slice(0, 500) : "AI 분석 실패" });
       }
+      await store.aiReview.updateMany({
+        where: { id, status: "RUNNING" },
+        data: { resultJson: JSON.stringify({ promptVersion: AI_REVIEW_PROMPT_VERSION, selectedRuleTypes: selected, pendingRuleTypes: selected, results }) },
+      });
     }
     const summary = {
       selected: results.length,
@@ -123,8 +155,8 @@ export async function runAiReviewJob(id: string) {
     const recommendations = [...new Set(results.filter((item) => item.verdict === "RISK" || item.verdict === "PARTIALLY_SAFE")
       .sort((a, b) => Number(b.verdict === "RISK") - Number(a.verdict === "RISK"))
       .flatMap((item) => Array.isArray(item.recommendations) ? item.recommendations as string[] : []))];
-    await store.aiReview.update({ where: { id }, data: { status: "COMPLETED", completedAt: new Date(), durationMs: Date.now() - startedAt, resultJson: JSON.stringify({ promptVersion: AI_REVIEW_PROMPT_VERSION, selectedRuleTypes: results.map((item) => item.ruleType), summary, recommendations, results }), usageJson: JSON.stringify(usage), error: null, provider: endpoint ? new URL(endpoint).hostname : null, model: model ?? null } });
+    await store.aiReview.updateMany({ where: { id, status: "RUNNING" }, data: { status: "COMPLETED", completedAt: new Date(), durationMs: Date.now() - startedAt, resultJson: JSON.stringify({ promptVersion: AI_REVIEW_PROMPT_VERSION, selectedRuleTypes: results.map((item) => item.ruleType), summary, recommendations, results }), usageJson: JSON.stringify(usage), error: null, provider: endpoint ? new URL(endpoint).hostname : null, model: model ?? null } });
   } catch (error) {
-    await store.aiReview.update({ where: { id }, data: { status: "FAILED", completedAt: new Date(), error: error instanceof Error ? error.message.slice(0, 500) : "AI 정밀 분석에 실패했습니다." } }).catch(() => undefined);
+    await store.aiReview.updateMany({ where: { id, status: "RUNNING" }, data: { status: "FAILED", completedAt: new Date(), error: error instanceof Error ? error.message.slice(0, 500) : "AI 정밀 분석에 실패했습니다." } }).catch(() => undefined);
   } finally { await store.$disconnect(); }
 }

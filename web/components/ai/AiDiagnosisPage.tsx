@@ -91,11 +91,11 @@ export function AiDiagnosisPage({ id }: { id: string }) {
     );
   }
 
-  if (diagnosis.status === "QUEUED" || diagnosis.status === "RUNNING" || diagnosis.status === "FAILED") {
+  if (diagnosis.status === "QUEUED" || diagnosis.status === "RUNNING" || diagnosis.status === "FAILED" || diagnosis.status === "CANCELLED") {
     return (
       <>
         <PageHead title="AI 정밀 점검" crumbs={crumbs} actions={<ButtonLink variant="secondary" href={reportHref}>점검 결과로 돌아가기</ButtonLink>} />
-        <AiProgress diagnosis={diagnosis} items={items} onRetry={() => setChoosing(true)} reportHref={reportHref} />
+        <AiProgress diagnosis={diagnosis} items={items} onRetry={() => setChoosing(true)} onStop={async () => { await aiDiagnosis.cancel(id); await load(); }} reportHref={reportHref} />
       </>
     );
   }
@@ -200,14 +200,16 @@ function AiSelect({ items, eligible, previous, replaces, onCancel, onRequested, 
 }
 
 /** Spec §4: 대기 중 / 분석 중 / 실패. */
-function AiProgress({ diagnosis, items, onRetry, reportHref }: { diagnosis: AiDiagnosis; items: ReportItem[]; onRetry: () => void; reportHref: string }) {
+function AiProgress({ diagnosis, items, onRetry, onStop, reportHref }: { diagnosis: AiDiagnosis; items: ReportItem[]; onRetry: () => void; onStop: () => Promise<void>; reportHref: string }) {
   const total = diagnosis.requestedTypes.length;
   const done = diagnosis.doneCount ?? 0;
   const picked = items.filter((item) => diagnosis.requestedTypes.includes(item.type));
-  if (diagnosis.status === "FAILED") {
+  const [stopping, setStopping] = useState(false);
+  const [stopError, setStopError] = useState("");
+  if (diagnosis.status === "FAILED" || diagnosis.status === "CANCELLED") {
     return (
-      <Alert kind="error" title="AI 정밀 점검에 실패했어요" actions={<><Button variant="secondary" size="sm" icon="refresh" onClick={onRetry}>다시 요청</Button><ButtonLink variant="tertiary" size="sm" href={reportHref}>점검 결과로 돌아가기</ButtonLink></>}>
-        {diagnosis.error ?? "분석 결과가 돌아오지 않았어요."} 기본 점검 결과와 확인 화면은 그대로예요.
+      <Alert kind={diagnosis.status === "CANCELLED" ? "brand" : "error"} title={diagnosis.status === "CANCELLED" ? "AI 분석을 중단했어요" : "AI 정밀 점검에 실패했어요"} actions={<><Button variant="secondary" size="sm" icon="refresh" onClick={onRetry}>다시 요청</Button><ButtonLink variant="tertiary" size="sm" href={reportHref}>점검 결과로 돌아가기</ButtonLink></>}>
+        {diagnosis.status === "CANCELLED" ? "요청이 중단됐어요." : diagnosis.error ?? "분석 결과가 돌아오지 않았어요."} 기본 점검 결과와 확인 화면은 그대로예요.
       </Alert>
     );
   }
@@ -237,7 +239,11 @@ function AiProgress({ diagnosis, items, onRetry, reportHref }: { diagnosis: AiDi
           );
         })}
       </ol>
-      <ButtonLink variant="secondary" href={reportHref}>기본 점검 결과 보기</ButtonLink>
+      {stopError ? <Alert kind="error" title={stopError} /> : null}
+      <div className="ai-progress__actions">
+        <Button variant="secondary" loading={stopping} loadingText="중단 중" onClick={async () => { setStopping(true); setStopError(""); try { await onStop(); } catch (cause) { setStopError(cause instanceof Error ? cause.message : "AI 분석을 중단하지 못했어요."); } finally { setStopping(false); } }}>분석 중단</Button>
+        <ButtonLink variant="secondary" href={reportHref}>기본 점검 결과 보기</ButtonLink>
+      </div>
     </section>
   );
 }

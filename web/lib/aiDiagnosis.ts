@@ -9,7 +9,7 @@ import * as mock from "./aiDiagnosisMock";
 
 /** AI's three-level verdict. "분석 자료 부족" is NOT a fourth verdict, see AiItemResult.status. */
 export type AiVerdict = "RISK" | "PARTIAL" | "SAFE";
-export type AiDiagnosisStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED";
+export type AiDiagnosisStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
 
 export type AiEvidence = {
   /** What was actually collected: wording, selection state, price, action log. */
@@ -72,7 +72,7 @@ export const aiDiagnosis = {
         const report = await api.getReport(scanId);
         const review = report.aiReview;
         if (!review) return null;
-        const result = review.result as ({ selectedRuleTypes?: FindingType[]; summary?: { safe?: number; partiallySafe?: number; risk?: number }; results?: { ruleType: FindingType; status: string; verdict?: string | null; summary?: string; reason?: string; observedFacts?: string[]; evidenceIds?: string[]; evidence?: { evidenceId: string; stage?: Stage; text: string }[]; recommendations?: string[]; limitations?: string[] }[] } | null) ?? null;
+        const result = review.result as ({ selectedRuleTypes?: FindingType[]; pendingRuleTypes?: FindingType[]; summary?: { safe?: number; partiallySafe?: number; risk?: number }; results?: { ruleType: FindingType; status: string; verdict?: string | null; summary?: string; reason?: string; observedFacts?: string[]; evidenceIds?: string[]; evidence?: { evidenceId: string; stage?: Stage; text: string }[]; recommendations?: string[]; limitations?: string[] }[] } | null) ?? null;
         const items: AiItemResult[] = (result?.results ?? []).map((item) => ({
           type: item.ruleType,
           status: item.status === "INSUFFICIENT_DATA" ? "INSUFFICIENT" : item.status === "FAILED" ? "FAILED" : "ANALYZED",
@@ -82,7 +82,7 @@ export const aiDiagnosis = {
           evidence: item.evidence?.map((evidence) => ({ text: evidence.text || "수집된 구조화 근거", evidenceId: evidence.evidenceId, stage: evidence.stage })) ?? (item.observedFacts ?? []).map((text) => ({ text })),
           recommendations: (item.recommendations ?? []).map((action) => ({ title: "개선 권고", reason: item.reason ?? "", action })),
         }));
-        return { id: review.id, scanId, status: review.status, requestedTypes: result?.selectedRuleTypes ?? items.map((item) => item.type), createdAt: "", completedAt: undefined, doneCount: items.length, error: review.error ?? undefined,
+        return { id: review.id, scanId, status: review.status, requestedTypes: result?.selectedRuleTypes ?? result?.pendingRuleTypes ?? items.map((item) => item.type), createdAt: "", completedAt: undefined, doneCount: items.length, error: review.error ?? undefined,
           summary: result?.summary ? { overview: `안전 ${result.summary.safe ?? 0}개, 부분 개선 ${result.summary.partiallySafe ?? 0}개, 위험 ${result.summary.risk ?? 0}개`, keyRisks: items.filter((item) => item.verdict === "RISK").map((item) => item.conclusion), priorities: items.flatMap((item) => item.recommendations.map((rec) => rec.action)).slice(0, 8) } : undefined,
           items };
       })(),
@@ -94,4 +94,8 @@ export const aiDiagnosis = {
         if (response.status === "COMPLETED") return (await aiDiagnosis.get(scanId))!;
         return { id: response.id, scanId, status: response.status, requestedTypes: response.selectedRuleTypes ?? types, createdAt: new Date().toISOString(), doneCount: 0, items: [] };
       })(),
+  cancel: (scanId: string): Promise<void> =>
+    aiDiagnosisMode(scanId) === "mock"
+      ? mock.cancelDiagnosis(scanId)
+      : (async () => { await apiRequest(`scans/${encodeURIComponent(scanId)}/ai-review`, { method: "DELETE" }); })(),
 };

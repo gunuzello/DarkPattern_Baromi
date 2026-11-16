@@ -163,6 +163,18 @@ export function AiDiagnosisBanner({ diagnosis, href }: { diagnosis: AiDiagnosis;
       </section>
     );
   }
+  if (diagnosis.status === "CANCELLED") {
+    return (
+      <section role="status" className="rv-banner rv-banner--fail">
+        <Icon name="alert" color="var(--risk-ink)" />
+        <div className="rv-banner__text">
+          <b>AI 정밀 점검을 중단했어요</b>
+          <span>기본 점검 결과는 그대로예요.</span>
+        </div>
+        <Link href={href} className="btn btn--secondary btn--sm">다시 요청</Link>
+      </section>
+    );
+  }
   const risk = diagnosis.items.filter((item) => item.verdict === "RISK" && item.status === "ANALYZED").length;
   return (
     <section role="status" className="rv-banner rv-banner--ai">
