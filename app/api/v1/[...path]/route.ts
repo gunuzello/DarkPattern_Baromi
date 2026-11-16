@@ -450,6 +450,49 @@ export async function POST(request: NextRequest, context: Context) {
   return notFound();
 }
 
+export async function PATCH(request: NextRequest, context: Context) {
+  const route = (await context.params).path;
+  if (route.length !== 2 || route[0] !== "shops" || !route[1]) return notFound();
+  if (await hasInvalidBearer(request)) return error("유효하지 않은 인증 토큰입니다.", 401);
+  if (request.headers.get("content-type")?.split(";")[0] !== "application/json") return error("JSON 요청이 필요합니다.", 415);
+  const origin = request.headers.get("origin");
+  const allowedOrigins = new Set([
+    new URL(demoOrigin()).origin,
+    ...(process.env.BAROMI_WEB_ORIGINS ?? "").split(",").map((value) => value.trim()).filter(Boolean),
+  ]);
+  if (origin && !allowedOrigins.has(origin)) return error("동일 출처 요청이 필요합니다.", 403);
+  const jwtOwner = await supabaseOwner(request);
+  const session = jwtOwner ?? request.cookies.get(cookie)?.value;
+  if (!session) return supabaseAuthEnabled() ? error("로그인이 필요합니다.", 401) : notFound();
+  const body = await request.json().catch(() => null);
+  const nickname = typeof body?.nickname === "string" ? body.nickname.trim() : "";
+  if (!nickname || nickname.length > 80) return error("쇼핑몰 이름은 1~80자로 입력해 주세요.", 400);
+
+  if (springAuthoritative()) {
+    const base = process.env.BAROMI_SPRING_API_URL?.replace(/\/$/, "");
+    if (!base) return error("최종 저장소에 연결할 수 없습니다.", 503);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5_000);
+    try {
+      const result = await fetch(`${base}/api/v1/shops/${encodeURIComponent(route[1])}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", "x-baromi-owner": session },
+        body: JSON.stringify({ nickname }),
+        signal: controller.signal,
+      });
+      return new Response(result.body, { status: result.status, headers: { "content-type": result.headers.get("content-type") ?? "application/json" } });
+    } catch {
+      return error("쇼핑몰 이름을 저장소에 전달하지 못했습니다. 잠시 후 다시 시도해 주세요.", 503);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  const shop = await db().shop.findFirst({ where: { id: route[1], ownerHash: hash(session) } });
+  if (!shop) return notFound();
+  return Response.json(await db().shop.update({ where: { id: shop.id }, data: { nickname } }));
+}
+
 export async function GET(request: NextRequest, context: Context) {
   const route = (await context.params).path;
   if (route.join("/") === "health") {
@@ -512,20 +555,6 @@ export async function GET(request: NextRequest, context: Context) {
     })) });
   }
   const [resource, id, action, ...extra] = route;
-  if (resource === "shops" && id && route.length === 2 && request.method === "PATCH") {
-    const body = await request.json().catch(() => null);
-    const nickname = typeof body?.nickname === "string" ? body.nickname.trim() : "";
-    if (!nickname || nickname.length > 80) return error("쇼핑몰 이름은 1~80자로 입력해 주세요.", 400);
-    if (springAuthoritative()) {
-      const base = process.env.BAROMI_SPRING_API_URL?.replace(/\/$/, "");
-      if (!base) return error("최종 저장소에 연결할 수 없습니다.", 503);
-      const result = await fetch(`${base}/api/v1/shops/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "content-type": "application/json", "x-baromi-owner": session }, body: JSON.stringify({ nickname }) });
-      return new Response(result.body, { status: result.status, headers: { "content-type": "application/json" } });
-    }
-    const shop = await db().shop.findFirst({ where: { id, ownerHash } });
-    if (!shop) return notFound();
-    return Response.json(await db().shop.update({ where: { id }, data: { nickname } }));
-  }
   if (!id || extra.length) return notFound();
 
   if (resource === "shops" && action === "scans" && route.length === 3) {
