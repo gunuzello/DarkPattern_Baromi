@@ -2930,7 +2930,7 @@ a:has(> .logo),
 }
 
 /* ==========================================================================
-   AI 정밀 진단: kept visibly separate from the base report (violet tint,
+   AI 정밀 점검: kept visibly separate from the base report (violet tint,
    pill-shaped verdicts) so AI results never read as the free engine's result.
    ========================================================================== */
 .ai-kicker {
@@ -2976,10 +2976,7 @@ a:has(> .logo),
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 26px 28px;
-  border: 1px solid var(--price-base);
-  border-radius: var(--radius-feature);
-  background: linear-gradient(135deg, #f1f3ff 0%, #f6f0ff 100%);
+  padding: 4px 0 4px;
 }
 .ai-select__intro h2 {
   font-size: 22px;
@@ -3085,11 +3082,13 @@ a:has(> .logo),
 .ai-select__foot {
   position: sticky;
   bottom: 0;
+  z-index: 3;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 0 8px;
-  background: linear-gradient(180deg, rgba(247, 247, 248, 0) 0%, var(--canvas) 18%);
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  background: var(--canvas);
 }
 .ai-select__note {
   display: flex;
@@ -3119,9 +3118,9 @@ a:has(> .logo),
   gap: 18px;
   max-width: 720px;
   padding: 28px;
-  border: 1px solid var(--price-base);
+  border: 1px solid var(--line);
   border-radius: var(--radius-feature);
-  background: linear-gradient(135deg, #f1f3ff 0%, #f6f0ff 100%);
+  background: var(--surface);
 }
 .ai-progress__head {
   display: flex;
@@ -3487,13 +3486,13 @@ a:has(> .logo),
   border-radius: 12px;
   background: var(--surface);
 }
-.ai-priorities li {
+.ai-priorities ol > li {
   display: flex;
   gap: 14px;
   padding: 16px 20px;
   counter-increment: pri;
 }
-.ai-priorities li + li {
+.ai-priorities ol > li + li {
   border-top: 1px solid var(--line);
 }
 .ai-priorities__no::before {
@@ -3582,4 +3581,99 @@ a:has(> .logo),
 .rv-banner--ai {
   border-color: var(--price-base);
   background: linear-gradient(135deg, #f1f3ff 0%, #f6f0ff 100%);
+}
+
+.ai-select__actions {
+  align-items: center;
+}
+.ai-select__count {
+  margin-right: auto;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.ai-select__count b {
+  font-size: 18px;
+  color: var(--link);
+}
+.ai-select__note {
+  padding: 0 2px;
+}
+.ai-tally__card[aria-pressed="true"] {
+  border-color: var(--ai-tone);
+  box-shadow: inset 0 3px 0 var(--ai-tone), 0 0 0 2px var(--ai-tone);
+}
+.ai-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.ai-diff h3 {
+  font-size: 15px;
+  font-weight: 800;
+}
+.ai-diff h3 .tnum {
+  color: var(--link);
+}
+.ai-diff ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ai-diff li + li {
+  border-top: 1px solid var(--surface-sub);
+}
+.ai-diff button {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  width: 100%;
+  padding: 10px 2px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ai-diff button:hover .ai-diff__name {
+  text-decoration: underline;
+}
+.ai-diff__name {
+  display: inline-flex;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.ai-diff__change {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-diff__base {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.ai-diff .faint {
+  font-size: 13px;
+}
+.ai-priorities__body .ai-recs {
+  margin: 4px 0 2px;
+  font-size: 14px;
+}
+.rv-ai-tag--risk { background: var(--risk-bg); color: var(--risk-ink); }
+.rv-ai-tag--partial { background: var(--review-bg); color: var(--review-ink); }
+.rv-ai-tag--safe { background: var(--clear-bg); color: var(--clear-ink); }
+.rv-ai-tag--none { background: var(--surface-sub); color: var(--ink-2); }
+.rv-ai--diag {
+  margin: 0 0 16px;
 }

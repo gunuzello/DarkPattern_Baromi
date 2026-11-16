@@ -1,5 +1,5 @@
 /**
- * AI 정밀 진단 (user-selected checks, 3-level AI verdict).
+ * AI 정밀 점검 (user-selected checks, 3-level AI verdict).
  *
  * DRAFT CONTRACT. The backend has not shipped this yet (spec §6), so every field name here
  * is a proposal to agree on with the backend team, and screens run on mock data. Keep the
@@ -49,10 +49,10 @@ export type AiDiagnosis = {
 };
 
 /**
- * Where AI 정밀 진단 data comes from:
+ * Where AI 정밀 점검 data comes from:
  * - "mock": the sample/demo report, or NEXT_PUBLIC_AI_DIAGNOSIS=mock (for review builds)
  * - "api": NEXT_PUBLIC_AI_DIAGNOSIS=api once the backend ships the endpoints
- * - "legacy": real scans until then keep the existing AI 꼼꼼 점검 (review candidates only)
+ * - "legacy": real scans until then keep the existing AI 정밀 점검 (review candidates only)
  */
 export function aiDiagnosisMode(scanId: string): "mock" | "api" | "legacy" {
   const flag = process.env.NEXT_PUBLIC_AI_DIAGNOSIS;
@@ -67,7 +67,7 @@ export const aiVerdictOrder: AiVerdict[] = ["RISK", "PARTIAL", "SAFE"];
 const apiRequest = aiDiagnosisFetch;
 
 export const aiDiagnosis = {
-  /** Latest AI 정밀 진단 for a scan, or null when none was requested. */
+  /** Latest AI 정밀 점검 for a scan, or null when none was requested. */
   get: (scanId: string): Promise<AiDiagnosis | null> =>
     aiDiagnosisMode(scanId) === "mock"
       ? mock.getDiagnosis(scanId)

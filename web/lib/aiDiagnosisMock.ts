@@ -1,5 +1,5 @@
 /**
- * Mock AI 정밀 진단 (spec §6: build the screens on mock data until the backend ships).
+ * Mock AI 정밀 점검 (spec §6: build the screens on mock data until the backend ships).
  * Results are composed from the scan's own report (findings, price lines, review wording),
  * so the mock never shows evidence the base report does not have.
  */
@@ -31,20 +31,29 @@ function read(scanId: string): Stored | null {
 /** Checks whose AI judgement depends on how the screen looks (show the captured screen). */
 const visual: FindingType[] = ["PRESELECTION", "MISDIRECTED_HIERARCHY", "DISGUISED_AD", "HIDDEN_INFO", "CONFIRM_SHAMING"];
 
+/** Evidence ids users can look up (ev_…). Page keys like `page:checkout` are internal. */
+const userFacingId = (id?: string) => (id && !id.includes(":") ? id : undefined);
+
 function evidenceFor(report: Report, item: ReportItem): AiEvidence[] {
   const out: AiEvidence[] = [];
   for (const finding of item.findings) {
+    const ids = (finding.evidenceIds ?? []).map(userFacingId).filter(Boolean) as string[];
     const lines = sampleEvidenceLines[finding.id] ?? report.priceLedger?.stages.find((stage) => stage.stage === finding.stage)?.displayedLines ?? [];
-    lines.forEach((text, index) => out.push({ text, evidenceId: finding.evidenceIds?.[index] ?? finding.evidenceIds?.[0], stage: finding.stage }));
+    lines.forEach((text) => out.push({ text, evidenceId: ids[0], stage: finding.stage }));
   }
-  for (const candidate of item.candidates) out.push({ text: `화면 문구 “${candidate.text}”`, evidenceId: candidate.evidenceIds[0] });
-  if (!out.length && item.note) out.push({ text: item.note, evidenceId: item.evidenceIds[0] });
+  for (const candidate of item.candidates) out.push({ text: `화면 문구 “${candidate.text}”`, evidenceId: userFacingId(candidate.evidenceIds[0]) });
+  // A clear result has no finding: its own observation is the evidence.
+  if (!out.length && item.kind === "clear" && item.note) out.push({ text: item.note, evidenceId: userFacingId(item.evidenceIds[0]) });
   return out;
 }
 
+/**
+ * The mock AI mostly agrees with the base engine, but reads FALSE_RECOMMENDATION more
+ * strictly so the report can show a check where the AI and the base result differ.
+ */
 function verdictFor(item: ReportItem): AiVerdict | null {
   if (item.kind === "risk") return "RISK";
-  if (item.kind === "review") return "PARTIAL";
+  if (item.kind === "review") return item.type === "FALSE_RECOMMENDATION" ? "RISK" : "PARTIAL";
   if (item.kind === "clear") return "SAFE";
   return null;
 }
@@ -56,14 +65,17 @@ function resultFor(report: Report, item: ReportItem): AiItemResult {
   if (!verdict || !evidence.length) {
     return {
       type: item.type, status: "INSUFFICIENT", conclusion: "판단에 필요한 화면이나 문구를 확보하지 못해 분석하지 않았어요.",
-      evidence, reasoning: item.note || "기본 점검에서 이 항목에 필요한 화면에 도달하지 못했어요.", recommendations: [],
+      evidence: [], reasoning: item.note || "기본 점검에서 이 항목에 필요한 화면에 도달하지 못했어요.", recommendations: [],
     };
   }
   const finding = item.findings[0];
+  const candidateReason = item.candidates[0]?.reason;
   const conclusion = {
-    RISK: `${item.summary} 손님이 알아차리기 어려운 방식이라 고쳐야 해요.`,
-    PARTIAL: `${item.summary} 표시 자체는 흔하지만 근거가 함께 보이지 않아 일부 개선이 필요해요.`,
-    SAFE: `이번에 살펴본 범위에서는 ${g.plain}에 해당하는 표시가 없었어요.`,
+    RISK: item.kind === "review"
+      ? `${item.summary} 기준을 밝히지 않은 순위는 손님이 사실처럼 믿기 쉬워 고쳐야 해요.`
+      : `${item.summary} 손님이 알아차리기 어려운 방식이라 고쳐야 해요.`,
+    PARTIAL: `${item.summary} 위험으로 단정할 근거는 없지만, ${candidateReason ? candidateReason.replace(/요\.$/, "요.") : "손님이 오해할 수 있어 보완이 필요해요."}`,
+    SAFE: "살펴본 범위에서 이 항목의 위험 신호는 보이지 않았어요. 지금 상태로는 문제가 없어 보여요.",
   }[verdict];
   const reasoning = {
     RISK: `${g.criteria.replace(/‘[^’]+’로 (판단해요|남겨요)./, "위험으로 볼 수 있어요.")} 수집한 근거가 이 조건에 그대로 맞아요.`,
@@ -88,7 +100,8 @@ async function compose(scanId: string, stored: Stored): Promise<AiDiagnosis> {
   if (doneCount < total) return { ...base, status: "RUNNING", doneCount };
 
   const report = await api.getReport(scanId);
-  const items = reportItems(report).filter((item) => stored.requestedTypes.includes(item.type)).map((item) => resultFor(report, item));
+  const baseItems = reportItems(report);
+  const items = baseItems.filter((item) => stored.requestedTypes.includes(item.type)).map((item) => resultFor(report, item));
   const analyzed = items.filter((item) => item.status === "ANALYZED");
   const count = (verdict: AiVerdict) => analyzed.filter((item) => item.verdict === verdict).length;
   const insufficient = items.length - analyzed.length;
@@ -101,7 +114,7 @@ async function compose(scanId: string, stored: Stored): Promise<AiDiagnosis> {
     completedAt: new Date(stored.startedAt + QUEUE_MS + total * PER_ITEM_MS).toISOString(),
     summary: {
       overview: `선택한 ${total}개 항목 중 위험 ${count("RISK")}개, 부분적 안전 ${count("PARTIAL")}개, 안전 ${count("SAFE")}개로 판단했어요.${insufficient ? ` ${insufficient}개는 분석 자료가 부족해 판정하지 않았어요.` : ""}`,
-      keyRisks: risky.map((item) => `${guide[item.type].plain}: ${item.conclusion.split(". ")[0].replace(/\.$/, "")}`),
+      keyRisks: risky.map((item) => `${guide[item.type].plain}: ${baseItems.find((base) => base.type === item.type)?.summary ?? item.conclusion}`),
       priorities: [...risky, ...partial].slice(0, 3).map((item) => item.recommendations[0]?.action).filter(Boolean) as string[],
     },
     items,

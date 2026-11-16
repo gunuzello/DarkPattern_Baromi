@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHead } from "@/components/shell/PageHead";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -49,14 +49,29 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
   const [open, setOpen] = useState<Set<string>>(() => new Set(results.filter((item) => item.verdict === "RISK").map((item) => item.type)));
   const shown = results.filter((item) => filter === "all" || (filter === "INSUFFICIENT" ? item.status === "INSUFFICIENT" : item.status === "ANALYZED" && item.verdict === filter));
 
-  // Section 03: one list, risks first, no duplicate actions.
+  // Section 03: one row per check, risks first; an action already listed is not repeated.
   const priorities = useMemo(() => {
     const seen = new Set<string>();
     return results
       .filter((item) => item.status === "ANALYZED" && (item.verdict === "RISK" || item.verdict === "PARTIAL"))
-      .flatMap((item) => item.recommendations.map((rec) => ({ ...rec, item })))
-      .filter((rec) => (seen.has(rec.action) ? false : (seen.add(rec.action), true)));
+      .map((item) => ({
+        item,
+        reason: item.recommendations[0]?.reason ?? item.conclusion,
+        actions: item.recommendations.map((rec) => rec.action).filter((action) => (seen.has(action) ? false : (seen.add(action), true))),
+      }))
+      .filter((row) => row.actions.length);
   }, [results]);
+
+  // What the AI saw differently from the free engine (the main reason to read this report).
+  const expected: Partial<Record<ReportItem["kind"], AiVerdict>> = { risk: "RISK", review: "PARTIAL", clear: "SAFE" };
+  const changed = results.filter((item) => item.status === "ANALYZED" && expected[base(item.type).kind] !== item.verdict);
+
+  useEffect(() => {
+    const type = window.location.hash.replace("#ai-item-", "");
+    if (type && results.some((item) => item.type === type)) jump(type);
+    // run once on arrival from a deep link
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function toggle(type: string, force?: boolean) {
     const next = new Set(open);
@@ -72,10 +87,10 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
   return (
     <div className="ai-report">
       <PageHead
-        title="AI 정밀 진단 리포트"
+        title="AI 정밀 점검 리포트"
         crumbs={crumbs}
         actions={<>
-          <Button variant="tertiary" onClick={onRechoose}>항목 다시 골라 진단</Button>
+          <Button variant="tertiary" onClick={onRechoose}>항목 다시 골라 점검</Button>
           <ButtonLink variant="secondary" href={reportHref}>기본 점검 결과로 돌아가기</ButtonLink>
         </>}
       />
@@ -83,15 +98,23 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
       {/* SECTION 01 */}
       <section className="ai-hero" aria-labelledby="ai-summary-title">
         <div className="ai-hero__meta">
-          <span className="ai-kicker"><Icon name="eye" size={14} />AI 분석</span>
+          <span className="ai-kicker"><Icon name="spark" size={14} />AI 분석</span>
           <span>점검한 쇼핑몰 <b>{report.targetUrl}</b></span>
-          <span>진단 일시 <b className="tnum">{formatLongDate(diagnosis.completedAt ?? diagnosis.createdAt)}</b></span>
+          <span>점검 일시 <b className="tnum">{formatLongDate(diagnosis.completedAt ?? diagnosis.createdAt)}</b></span>
           <span>AI 분석 항목 <b className="tnum">{diagnosis.requestedTypes.length}개</b></span>
         </div>
-        <h2 id="ai-summary-title" className="sr-only">종합 진단 결과</h2>
+        <h2 id="ai-summary-title" className="sr-only">종합 점검 결과</h2>
         <div className="ai-tally">
           {aiVerdictOrder.map((verdict) => (
-            <button key={verdict} type="button" className={`ai-tally__card ai-tally__card--${verdict.toLowerCase()}`} onClick={() => { setFilter(verdict); document.getElementById("ai-items")?.scrollIntoView({ behavior: "smooth" }); }} disabled={!count(verdict)}>
+            <button
+              key={verdict}
+              type="button"
+              className={`ai-tally__card ai-tally__card--${verdict.toLowerCase()}`}
+              aria-pressed={filter === verdict}
+              aria-label={`${aiVerdictLabels[verdict]} ${count(verdict)}개만 보기`}
+              onClick={() => { const next = filter === verdict ? "all" : verdict; setFilter(next); if (next !== "all") document.getElementById("ai-items")?.scrollIntoView({ behavior: "smooth" }); }}
+              disabled={!count(verdict)}
+            >
               <AiVerdictBadge verdict={verdict} />
               <span className="ai-tally__num tnum">{count(verdict)}<small>개</small></span>
               <span className="ai-tally__hint">{{ RISK: "구체적인 위험 신호를 찾았어요", PARTIAL: "일부 개선이 필요해요", SAFE: "위험 신호가 보이지 않았어요" }[verdict]}</span>
@@ -99,6 +122,28 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
           ))}
         </div>
         {insufficient ? <p className="ai-hero__insufficient"><AiVerdictBadge verdict="INSUFFICIENT" /> {insufficient}개 항목은 판정하지 않았어요.</p> : null}
+        <div className="ai-diff">
+          <h3>기본 점검과 다르게 본 항목 <span className="tnum">{changed.length}</span>개</h3>
+          {changed.length ? (
+            <ul>
+              {changed.map((item) => {
+                const b = base(item.type);
+                return (
+                  <li key={item.type}>
+                    <button type="button" onClick={() => jump(item.type)}>
+                      <span className="ai-diff__name"><span className="tnum faint">{b.no}</span>{guide[item.type].plain}</span>
+                      <span className="ai-diff__change">
+                        <span className="ai-diff__base"><Mark kind={b.kind} />{plainLabels[b.kind]}</span>
+                        <Icon name="chevron" size={14} color="var(--ink-3)" />
+                        <AiVerdictBadge verdict={item.verdict!} />
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : <p className="faint">AI 판정이 기본 점검 결과와 모두 같아요.</p>}
+        </div>
         {diagnosis.summary ? (
           <div className="ai-opinion">
             <h3>AI 종합 의견</h3>
@@ -145,17 +190,17 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
             <span className="faint">위험 → 부분적 안전 순서</span>
           </div>
           <ol>
-            {priorities.map((rec) => (
-              <li key={rec.action}>
+            {priorities.map((row) => (
+              <li key={row.item.type}>
                 <span className="ai-priorities__no tnum" aria-hidden="true" />
                 <div className="ai-priorities__body">
                   <div className="ai-priorities__top">
-                    <b>{rec.action}</b>
-                    <AiVerdictBadge verdict={rec.item.verdict!} />
+                    <b>{guide[row.item.type].plain}</b>
+                    <AiVerdictBadge verdict={row.item.verdict!} />
                   </div>
-                  <span className="ai-priorities__type">{guide[rec.item.type].plain}</span>
-                  <p>{rec.reason}</p>
-                  <button type="button" className="auth-link" onClick={() => jump(rec.item.type)}>상세 분석 보기</button>
+                  <p>{row.reason}</p>
+                  <ul className="ai-recs">{row.actions.map((action) => <li key={action}><Icon name="check" size={14} />{action}</li>)}</ul>
+                  <button type="button" className="auth-link" onClick={() => jump(row.item.type)}>상세 분석 보기</button>
                 </div>
               </li>
             ))}
@@ -193,7 +238,7 @@ function AiItemCard({ result, base, scanId, open, onToggle }: { result: AiItemRe
                 {result.evidence.map((ev, index) => (
                   <li key={index}>
                     <span>{ev.text}</span>
-                    {ev.evidenceId || ev.stage ? <span className="ai-evidence__ref mono">{[ev.stage ? stageLabels[ev.stage] : "", ev.evidenceId ?? ""].filter(Boolean).join(" · ")}</span> : null}
+                    {ev.stage || (ev.evidenceId && !ev.evidenceId.includes(":")) ? <span className="ai-evidence__ref">{[ev.stage ? stageLabels[ev.stage] : "", ev.evidenceId && !ev.evidenceId.includes(":") ? `확인 번호 ${ev.evidenceId}` : ""].filter(Boolean).join(" · ")}</span> : null}
                   </li>
                 ))}
               </ul>

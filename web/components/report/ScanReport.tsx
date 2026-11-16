@@ -13,9 +13,9 @@ import { sampleEvidenceLines } from "@/lib/demo";
 import { useBackToLogin } from "@/lib/session";
 import { blockerText, collectionFailureLabels, ruleByType, stageLabels } from "@/lib/labels";
 import { formatDuration, hostOf, pathLabel, viewportLabel } from "@/lib/format";
-import type { Finding, Report } from "@/lib/types";
+import type { Finding, FindingType, Report } from "@/lib/types";
 import { AiDiagnosisBanner, AiRequestDialog, AiStatusBanner } from "./AiReview";
-import { aiDiagnosis, aiDiagnosisMode, type AiDiagnosis } from "@/lib/aiDiagnosis";
+import { aiDiagnosis, aiDiagnosisMode, type AiDiagnosis, type AiItemResult } from "@/lib/aiDiagnosis";
 import { aiTargets, reportItems, type ReportItem } from "./model";
 import { CoverageTable, FlowTrack, LedgerTable } from "./ReportSections";
 import { kindOrder, ResultRing } from "./ResultRing";
@@ -70,7 +70,7 @@ export function ScanReport({ id }: { id: string }) {
 
   useEffect(() => { void load(); }, [load]);
 
-  // AI 정밀 진단 progress shows on the base report too.
+  // AI 정밀 점검 progress shows on the base report too.
   useEffect(() => {
     if (diag?.status !== "QUEUED" && diag?.status !== "RUNNING") return;
     const timer = setTimeout(() => { aiDiagnosis.get(id).then(setDiag).catch(() => undefined); }, 2000);
@@ -132,10 +132,10 @@ export function ScanReport({ id }: { id: string }) {
     try {
       await api.requestAiReview(id);
       setAiOpen(false);
-      toast.show("AI 꼼꼼 점검을 요청했어요");
+      toast.show("AI 정밀 점검을 요청했어요");
       void load();
     } catch (cause) {
-      setAiError(cause instanceof ApiError ? cause.message : "AI 꼼꼼 점검을 요청하지 못했어요.");
+      setAiError(cause instanceof ApiError ? cause.message : "AI 정밀 점검을 요청하지 못했어요.");
     } finally {
       setAiPending(false);
     }
@@ -185,6 +185,7 @@ export function ScanReport({ id }: { id: string }) {
 
   const count = (kind: ResultKind) => items.filter((item) => item.kind === kind).length;
   const targets = aiTargets(items);
+  const aiResults = aiMode !== "legacy" && diag?.status === "COMPLETED" ? Object.fromEntries(diag.items.map((result) => [result.type, result])) as Partial<Record<FindingType, AiItemResult>> : undefined;
   const review = report.aiReview;
   const aiBusy = review?.status === "QUEUED" || review?.status === "RUNNING";
   const canRequestAi = targets.length > 0 && !review;
@@ -237,7 +238,7 @@ export function ScanReport({ id }: { id: string }) {
           <div className="rv-summary__head">
             <div className="rv-summary__chips">
               <span className="rv-chip rv-chip--state"><span className={`rv-dot rv-dot--${report.scanStatus.toLowerCase()}`} />{scanStateLabel[report.scanStatus]}</span>
-              <span className="rv-chip">{review?.status === "COMPLETED" ? "AI 꼼꼼 점검 포함" : "무료 기본 점검"}</span>
+              <span className="rv-chip">{review?.status === "COMPLETED" ? "AI 정밀 점검 포함" : "무료 기본 점검"}</span>
               {publicSample ? <span className="rv-chip rv-chip--brand">예시 데이터</span> : null}
             </div>
             <h1 id="rv-title" className="rv-summary__title">쇼핑몰 점검 결과</h1>
@@ -270,7 +271,7 @@ export function ScanReport({ id }: { id: string }) {
             <span className="rv-pill">{staticMode ? "공개 화면 읽기" : "실제 구매 과정 확인"}</span>
             <span className="rv-pill">{viewportLabel(report.viewport)} · {pathLabel(report.purchasePath)}</span>
             <span className="rv-pill tnum">걸린 시간 {formatDuration(report.durationMs)}</span>
-            <span className="faint">{aiMode !== "legacy" ? (diag?.status === "COMPLETED" ? `AI 정밀 진단 ${diag.requestedTypes.length}개 항목` : "AI 사용 안 함") : review?.status === "COMPLETED" ? `AI 의견 ${targets.filter((item) => item.ai.length).length}곳` : "AI 사용 안 함"}</span>
+            <span className="faint">{aiMode !== "legacy" ? (diag?.status === "COMPLETED" ? `AI 정밀 점검 ${diag.requestedTypes.length}개 항목` : "AI 사용 안 함") : review?.status === "COMPLETED" ? `AI 의견 ${targets.filter((item) => item.ai.length).length}곳` : "AI 사용 안 함"}</span>
           </div>
         </section>
 
@@ -282,23 +283,23 @@ export function ScanReport({ id }: { id: string }) {
           </div>
           {aiMode !== "legacy" ? (
             <div className="rv-card rv-card--brand">
-              <span className="rv-card__kicker">유료 · AI 정밀 진단</span>
+              <span className="rv-card__kicker">유료 · AI 정밀 점검</span>
               <span className="rv-card__title">원하는 항목을 골라 AI가 한 번 더 판단해 드려요</span>
               <p>16가지 중 어떤 항목이든 고를 수 있어요. AI는 위험, 부분적 안전, 안전으로 판단하고, 결과는 기본 점검과 따로 리포트로 보여드려요.</p>
               <ButtonLink variant="secondary" block href={aiHref}>
-                {diag?.status === "COMPLETED" ? "AI 리포트 보기" : diag?.status === "QUEUED" || diag?.status === "RUNNING" ? "AI 진단 진행 보기" : "AI 꼼꼼 점검 받기"}
+                {diag?.status === "COMPLETED" ? "AI 리포트 보기" : diag?.status === "QUEUED" || diag?.status === "RUNNING" ? "AI 점검 진행 보기" : "AI 정밀 점검 받기"}
               </ButtonLink>
             </div>
           ) : targets.length ? (
             <div className="rv-card rv-card--brand">
-              <span className="rv-card__kicker">유료 · AI 꼼꼼 점검</span>
+              <span className="rv-card__kicker">유료 · AI 정밀 점검</span>
               <span className="rv-card__title">확인해 보세요 {targets.length}곳을 AI가 한 번 더 봐 드려요</span>
               <p>문구의 뜻과 눈에 띄게 꾸민 부분까지 더 살펴봐요. 기본 점검 결과는 그대로 두고 AI 의견이 따로 붙어요. 근거가 부족하면 ‘확인해 보세요’로 남을 수 있어요.</p>
               {review?.status === "COMPLETED" ? (
                 <Button variant="secondary" block onClick={() => { const first = targets.find((item) => item.ai.length) ?? targets[0]; select(first); }}>AI 의견 보기</Button>
               ) : (
                 <Button variant="secondary" block disabled={aiBusy || review?.status === "FAILED"} onClick={() => { setAiError(""); setAiOpen(true); }}>
-                  {aiBusy ? "AI 꼼꼼 점검 중" : "AI 꼼꼼 점검 받기"}
+                  {aiBusy ? "AI 정밀 점검 중" : "AI 정밀 점검 받기"}
                 </Button>
               )}
             </div>
@@ -335,6 +336,7 @@ export function ScanReport({ id }: { id: string }) {
             onSelect={select}
             clearOpen={clearOpen}
             onClearOpen={setClearOpen}
+            aiResults={aiResults}
           />
         </div>
         <div ref={detailRef} className="rv-split__detail">
@@ -356,6 +358,8 @@ export function ScanReport({ id }: { id: string }) {
                 onRescan={rescan}
                 rescanPending={pending}
                 publicSample={publicSample}
+                aiResult={current ? aiResults?.[current.type] : undefined}
+                aiHref={aiHref}
               />
             ) : null}
           </div>

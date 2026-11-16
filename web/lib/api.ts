@@ -89,7 +89,7 @@ async function requestDownload(path: string): Promise<Blob> {
   return response.blob();
 }
 
-/** Plain authenticated request, used by the draft AI 정밀 진단 client (lib/aiDiagnosis.ts). */
+/** Plain authenticated request, used by the draft AI 정밀 점검 client (lib/aiDiagnosis.ts). */
 export const aiDiagnosisFetch = <T>(path: string, init?: RequestInit) => request<T>(path, init);
 
 const post = <T>(path: string, body: object) => request<T>(path, { method: "POST", body: JSON.stringify(body) });
