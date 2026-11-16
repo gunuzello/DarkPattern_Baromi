@@ -15,8 +15,8 @@ import type { Report } from "@/lib/types";
 import { usesSample } from "@/lib/api";
 
 /** AI verdict pill. Shape + text, and a different shape from the base report's square badges. */
-export function AiVerdictBadge({ verdict, large }: { verdict: AiVerdict | "INSUFFICIENT"; large?: boolean }) {
-  const label = verdict === "INSUFFICIENT" ? "분석 자료 부족" : aiVerdictLabels[verdict];
+export function AiVerdictBadge({ verdict, large }: { verdict: AiVerdict | "INSUFFICIENT" | "FAILED"; large?: boolean }) {
+  const label = verdict === "INSUFFICIENT" ? "분석 자료 부족" : verdict === "FAILED" ? "분석 실패" : aiVerdictLabels[verdict];
   return (
     <span className={`ai-verdict ai-verdict--${verdict.toLowerCase()}${large ? " ai-verdict--lg" : ""}`}>
       <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
@@ -24,14 +24,15 @@ export function AiVerdictBadge({ verdict, large }: { verdict: AiVerdict | "INSUF
         {verdict === "PARTIAL" ? <><circle cx="6" cy="6" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M6 1.4a4.6 4.6 0 0 1 0 9.2z" fill="currentColor" /></> : null}
         {verdict === "SAFE" ? <><circle cx="6" cy="6" r="5" fill="currentColor" /><path d="M3.6 6.2 5.3 7.8 8.5 4.6" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></> : null}
         {verdict === "INSUFFICIENT" ? <circle cx="6" cy="6" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray="2 2" /> : null}
+        {verdict === "FAILED" ? <><circle cx="6" cy="6" r="5" fill="currentColor" /><path d="m4.2 4.2 3.6 3.6m0-3.6L4.2 7.8" fill="none" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" /></> : null}
       </svg>
       {label}
     </span>
   );
 }
 
-type Filter = "all" | AiVerdict | "INSUFFICIENT";
-const rank = (item: AiItemResult) => item.status === "INSUFFICIENT" ? 9 : aiVerdictOrder.indexOf(item.verdict!);
+type Filter = "all" | AiVerdict | "INSUFFICIENT" | "FAILED";
+const rank = (item: AiItemResult) => item.status === "FAILED" ? 10 : item.status === "INSUFFICIENT" ? 9 : aiVerdictOrder.indexOf(item.verdict!);
 
 export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRechoose }: {
   report: Report;
@@ -45,9 +46,10 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
   const base = (type: AiItemResult["type"]) => items.find((item) => item.type === type)!;
   const count = (verdict: AiVerdict) => results.filter((item) => item.verdict === verdict && item.status === "ANALYZED").length;
   const insufficient = results.filter((item) => item.status === "INSUFFICIENT").length;
+  const failed = results.filter((item) => item.status === "FAILED").length;
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<Set<string>>(() => new Set(results.filter((item) => item.verdict === "RISK").map((item) => item.type)));
-  const shown = results.filter((item) => filter === "all" || (filter === "INSUFFICIENT" ? item.status === "INSUFFICIENT" : item.status === "ANALYZED" && item.verdict === filter));
+  const shown = results.filter((item) => filter === "all" || (filter === "INSUFFICIENT" || filter === "FAILED" ? item.status === filter : item.status === "ANALYZED" && item.verdict === filter));
 
   // Section 03: one row per check, risks first; an action already listed is not repeated.
   const priorities = useMemo(() => {
@@ -122,6 +124,7 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
           ))}
         </div>
         {insufficient ? <p className="ai-hero__insufficient"><AiVerdictBadge verdict="INSUFFICIENT" /> {insufficient}개 항목은 판정하지 않았어요.</p> : null}
+        {failed ? <p className="ai-hero__insufficient"><AiVerdictBadge verdict="FAILED" /> {failed}개 항목은 AI 요청에 실패했어요. 기본 점검 결과는 그대로예요.</p> : null}
         <div className="ai-diff">
           <h3>기본 점검과 다르게 본 항목 <span className="tnum">{changed.length}</span>개</h3>
           {changed.length ? (
@@ -171,7 +174,7 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
           </span>
         </div>
         <div className="rv-tabs ai-filter" role="toolbar" aria-label="AI 판정으로 거르기">
-          {([["all", `전체 ${results.length}`], ...aiVerdictOrder.map((v) => [v, `${aiVerdictLabels[v]} ${count(v)}`]), ...(insufficient ? [["INSUFFICIENT", `분석 자료 부족 ${insufficient}`]] : [])] as [Filter, string][]).map(([key, label]) => (
+          {([["all", `전체 ${results.length}`], ...aiVerdictOrder.map((v) => [v, `${aiVerdictLabels[v]} ${count(v)}`]), ...(insufficient ? [["INSUFFICIENT", `분석 자료 부족 ${insufficient}`]] : []), ...(failed ? [["FAILED", `분석 실패 ${failed}`]] : [])] as [Filter, string][]).map(([key, label]) => (
             <button key={key} type="button" className="rv-tab" aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>
           ))}
         </div>
@@ -213,7 +216,7 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
 
 function AiItemCard({ result, base, scanId, open, onToggle }: { result: AiItemResult; base: ReportItem; scanId: string; open: boolean; onToggle: () => void }) {
   const g = guide[result.type];
-  const verdict = result.status === "INSUFFICIENT" ? "INSUFFICIENT" : result.verdict!;
+  const verdict = result.status === "FAILED" ? "FAILED" : result.status === "INSUFFICIENT" ? "INSUFFICIENT" : result.verdict!;
   const bodyId = `ai-body-${result.type}`;
   return (
     <li id={`ai-item-${result.type}`} className={`ai-card ai-card--${verdict.toLowerCase()}`}>
@@ -249,7 +252,7 @@ function AiItemCard({ result, base, scanId, open, onToggle }: { result: AiItemRe
             </div>
           ) : null}
           <div className="ai-block">
-            <h4>{result.status === "INSUFFICIENT" ? "분석하지 못한 이유" : "AI 판단 이유"}</h4>
+            <h4>{result.status !== "ANALYZED" ? "분석하지 못한 이유" : "AI 판단 이유"}</h4>
             <p>{result.reasoning}</p>
           </div>
           {result.recommendations.length ? (

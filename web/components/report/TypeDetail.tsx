@@ -118,7 +118,7 @@ export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onReq
         <section className="rv-ai rv-ai--diag" aria-label="AI 정밀 점검 결과">
           <div className="rv-ai__head">
             <span className="rv-ai__title">AI 정밀 점검 결과</span>
-            <AiVerdictBadge verdict={aiResult.status === "INSUFFICIENT" ? "INSUFFICIENT" : aiResult.verdict!} />
+            <AiVerdictBadge verdict={aiResult.status === "FAILED" ? "FAILED" : aiResult.status === "INSUFFICIENT" ? "INSUFFICIENT" : aiResult.verdict!} />
           </div>
           <p style={{ fontSize: 13 }}>{aiResult.conclusion}</p>
           <Link href={`${aiHref}#ai-item-${item.type}`} className="auth-link">AI 상세 분석 보기</Link>

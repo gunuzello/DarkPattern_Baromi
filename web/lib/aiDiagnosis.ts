@@ -21,8 +21,8 @@ export type AiRecommendation = { title: string; reason: string; action: string }
 
 export type AiItemResult = {
   type: FindingType;
-  /** INSUFFICIENT = the AI could not analyse it (no verdict shown). */
-  status: "ANALYZED" | "INSUFFICIENT";
+  /** FAILED is a provider/job failure; it must not be presented as missing evidence. */
+  status: "ANALYZED" | "INSUFFICIENT" | "FAILED";
   verdict?: AiVerdict;
   conclusion: string;
   evidence: AiEvidence[];
@@ -75,9 +75,9 @@ export const aiDiagnosis = {
         const result = review.result as ({ selectedRuleTypes?: FindingType[]; summary?: { safe?: number; partiallySafe?: number; risk?: number }; results?: { ruleType: FindingType; status: string; verdict?: string | null; summary?: string; reason?: string; observedFacts?: string[]; evidenceIds?: string[]; evidence?: { evidenceId: string; stage?: Stage; text: string }[]; recommendations?: string[]; limitations?: string[] }[] } | null) ?? null;
         const items: AiItemResult[] = (result?.results ?? []).map((item) => ({
           type: item.ruleType,
-          status: item.status === "INSUFFICIENT_DATA" || item.status === "FAILED" ? "INSUFFICIENT" : "ANALYZED",
+          status: item.status === "INSUFFICIENT_DATA" ? "INSUFFICIENT" : item.status === "FAILED" ? "FAILED" : "ANALYZED",
           verdict: item.verdict === "PARTIALLY_SAFE" ? "PARTIAL" : item.verdict === "RISK" || item.verdict === "SAFE" ? item.verdict : undefined,
-          conclusion: item.summary ?? item.reason ?? "분석 결과를 확인할 수 없어요.",
+          conclusion: item.status === "FAILED" ? "AI 제공자 오류로 이 항목을 분석하지 못했어요." : item.summary ?? item.reason ?? "분석 결과를 확인할 수 없어요.",
           reasoning: item.reason ?? item.limitations?.join(" ") ?? "",
           evidence: item.evidence?.map((evidence) => ({ text: evidence.text || "수집된 구조화 근거", evidenceId: evidence.evidenceId, stage: evidence.stage })) ?? (item.observedFacts ?? []).map((text) => ({ text })),
           recommendations: (item.recommendations ?? []).map((action) => ({ title: "개선 권고", reason: item.reason ?? "", action })),

@@ -90,6 +90,7 @@ export function TypeList({ items, filter, onFilter, selected, onSelect, clearOpe
 
 /** Compact AI verdict next to a check in the base list. */
 function AiTag({ result }: { result: AiItemResult }) {
-  const verdict = result.status === "INSUFFICIENT" ? null : result.verdict;
-  return <span className={`rv-ai-tag rv-ai-tag--${verdict?.toLowerCase() ?? "none"}`}>AI {verdict ? aiVerdictLabels[verdict] : "자료 부족"}</span>;
+  const verdict = result.status === "ANALYZED" ? result.verdict : null;
+  const label = result.status === "FAILED" ? "요청 실패" : verdict ? aiVerdictLabels[verdict] : "자료 부족";
+  return <span className={`rv-ai-tag rv-ai-tag--${result.status === "FAILED" ? "failed" : verdict?.toLowerCase() ?? "none"}`}>AI {label}</span>;
 }
