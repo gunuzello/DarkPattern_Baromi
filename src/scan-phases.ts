@@ -3,6 +3,14 @@ import { stages, type Stage } from "./demo";
 
 export type ScanPhaseId = Stage | `surface:${DiagnosticSurfaceKind}` | "site-crawl";
 export type ScanPhaseStatus = "PENDING" | "RUNNING" | "COVERED" | "DISCOVERED" | "NOT_FOUND" | "BLOCKED" | "FAILED" | "SKIPPED";
+export type ScanPhaseActivity = {
+  visitedScreens: number;
+  discoveredScreens: number;
+  pendingScreens: number;
+  visitedUrls: number;
+  discoveredUrls: number;
+  updatedAt: string;
+};
 export type ScanPhase = {
   status: ScanPhaseStatus;
   startedAt?: string;
@@ -10,6 +18,7 @@ export type ScanPhase = {
   durationMs?: number;
   reason?: string;
   evidenceIds: string[];
+  activity?: ScanPhaseActivity;
 };
 export type ScanPhaseResults = Partial<Record<ScanPhaseId, ScanPhase>>;
 

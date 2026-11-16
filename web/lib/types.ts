@@ -27,6 +27,14 @@ export type Summary = { suspected: number; reviewNeeded: number; notTested: numb
 /** Spec §4: purchase stages and the seven surfaces share one phase status system. */
 export type PhaseStatus = "PENDING" | "RUNNING" | "COVERED" | "DISCOVERED" | "NOT_FOUND" | "BLOCKED" | "FAILED" | "SKIPPED";
 export type PhaseId = Stage | `surface:${SurfaceKind}` | "site-crawl";
+export type PhaseActivity = {
+  visitedScreens: number;
+  discoveredScreens: number;
+  pendingScreens: number;
+  visitedUrls: number;
+  discoveredUrls: number;
+  updatedAt: string;
+};
 export type PhaseResult = {
   status: PhaseStatus;
   startedAt?: string;
@@ -34,6 +42,7 @@ export type PhaseResult = {
   durationMs?: number;
   reason?: string;
   evidenceIds?: string[];
+  activity?: PhaseActivity;
 };
 export type PhaseResults = Partial<Record<PhaseId, PhaseResult>>;
 

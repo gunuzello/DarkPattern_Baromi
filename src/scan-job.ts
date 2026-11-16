@@ -13,11 +13,11 @@ import { scanComparisonVersion } from "./scan-comparison";
 import { decryptCredentials, type TestCredentials } from "./credential-vault";
 import { notifySpringScanStatus } from "./spring-status";
 import { classifyDynamicFailure } from "./scan-failure";
-import { closeCancelledScanPhases, closeFailedScanPhases, initialScanPhases, nextPurchaseStage, parseScanPhases, updateScanPhase, type ScanPhaseId, type ScanPhaseStatus } from "./scan-phases";
+import { closeCancelledScanPhases, closeFailedScanPhases, initialScanPhases, nextPurchaseStage, parseScanPhases, updateScanPhase, type ScanPhaseActivity, type ScanPhaseId, type ScanPhaseStatus } from "./scan-phases";
 import { buildRuleCoverage } from "./rule-coverage";
 
 type ScanJobCallbacks = {
-  onPhase?: (id: ScanPhaseId, status: ScanPhaseStatus, details?: { reason?: string; evidenceIds?: string[] }) => Promise<void>;
+  onPhase?: (id: ScanPhaseId, status: ScanPhaseStatus, details?: { reason?: string; evidenceIds?: string[]; activity?: ScanPhaseActivity }) => Promise<void>;
 };
 
 export async function runScanJob(id: string, targetUrl: string, callbacks: ScanJobCallbacks = {}) {
@@ -61,7 +61,7 @@ export async function runScanJob(id: string, targetUrl: string, callbacks: ScanJ
       let lastCrawlWriteAt = 0;
       let lastCrawlVisited = -1;
       let phases = parseScanPhases(requested.phaseResultsJson, initialScanPhases(requested.purchasePath === "DIRECT" ? "DIRECT" : "CART", requested.executionMode === "DYNAMIC"));
-      const recordPhase = async (phaseId: ScanPhaseId, status: ScanPhaseStatus, details: { reason?: string; evidenceIds?: string[] } = {}) => {
+      const recordPhase = async (phaseId: ScanPhaseId, status: ScanPhaseStatus, details: { reason?: string; evidenceIds?: string[]; activity?: ScanPhaseActivity } = {}) => {
         phases = updateScanPhase(phases, phaseId, { status, ...details });
         await store.scan.update({ where: { id }, data: { phaseResultsJson: JSON.stringify(phases), currentStage: `${phaseId}:${status}` } });
         void notifySpringScanStatus(id, "running", `${phaseId}:${status}`, undefined, phases);
@@ -85,8 +85,17 @@ export async function runScanJob(id: string, targetUrl: string, callbacks: ScanJ
             if (crawl.visited !== 0 && crawl.visited !== lastCrawlVisited && now - lastCrawlWriteAt < 1_000 && crawl.visited - lastCrawlVisited < 5) return;
             lastCrawlWriteAt = now;
             lastCrawlVisited = crawl.visited;
+            const activity: ScanPhaseActivity = {
+              visitedScreens: crawl.visited,
+              discoveredScreens: crawl.discovered,
+              pendingScreens: crawl.pending,
+              visitedUrls: crawl.uniqueVisitedUrls,
+              discoveredUrls: crawl.uniqueDiscoveredUrls,
+              updatedAt: new Date(now).toISOString(),
+            };
             await recordPhase("site-crawl", "RUNNING", {
               reason: `고유 URL ${crawl.uniqueVisitedUrls}/${crawl.uniqueDiscoveredUrls} · 화면 상태 ${crawl.visited}/${crawl.discovered} · 대기 ${crawl.pending} · 현재 ${crawl.currentUrl.slice(0, 180)}`,
+              activity,
             });
           })
           : scanPublicShop(instance, target.url, directory, onStage, undefined, requested.viewport === "MOBILE" ? "MOBILE" : "DESKTOP", requested.purchasePath === "DIRECT" ? "DIRECT" : "CART")

@@ -134,6 +134,11 @@ export function ScanProgress({ id }: { id: string }) {
   const nowText = running.length
     ? `지금 확인 중: ${running.join(", ")}`
     : !scan.phaseResults && scan.currentStage ? `지금 확인 중: ${stageLabels[scan.currentStage]}` : scan.status === "QUEUED" ? "작업기가 진단을 시작하기를 기다리고 있어요" : "다음 단계를 준비하고 있어요";
+  const crawlActivity = crawl.activity;
+  const crawlActivityAgeMs = crawlActivity ? Math.max(0, Date.now() - Date.parse(crawlActivity.updatedAt)) : null;
+  const crawlUpdatedText = crawlActivityAgeMs == null || !Number.isFinite(crawlActivityAgeMs)
+    ? null
+    : `${crawl.status === "RUNNING" ? "최근 갱신" : "마지막 갱신"} ${crawlActivityAgeMs < 5_000 ? "방금" : crawlActivityAgeMs < 60_000 ? `${Math.floor(crawlActivityAgeMs / 1_000)}초 전` : `${Math.floor(crawlActivityAgeMs / 60_000)}분 전`}`;
 
   return (
     <>
@@ -178,12 +183,19 @@ export function ScanProgress({ id }: { id: string }) {
           <span className="faint" style={{ fontSize: 14 }}>{active ? scanDurationHint : scan.durationMs != null ? `소요 시간 ${formatDuration(scan.durationMs)}` : ""}</span>
         </div>
         <div className="progress" role="progressbar" aria-label="진단 진행률" aria-valuenow={scan.progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${scan.progress}%` }} /></div>
+        <p className="faint" style={{ fontSize: 12, marginTop: -18, marginBottom: -8 }}>퍼센트는 완료된 진단 단계 기준이에요.</p>
         <Tracker steps={steps} />
         {!staticMode ? (
           <div className="phase-row" aria-label="쇼핑몰 전체 화면 크롤링 상태">
             <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
               <span style={{ fontSize: 14, fontWeight: 600 }}>쇼핑몰 전체 화면 탐색</span>
               {crawl.reason ? <span className="faint" style={{ fontSize: 12, overflowWrap: "anywhere" }}>{crawl.reason}</span> : null}
+              {crawlActivity ? <span className="faint" style={{ fontSize: 12, display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 4 }}>
+                <span>확인한 화면 {crawlActivity.visitedScreens}/{crawlActivity.discoveredScreens}</span>
+                <span>대기 화면 {crawlActivity.pendingScreens}</span>
+                <span>고유 URL {crawlActivity.visitedUrls}/{crawlActivity.discoveredUrls}</span>
+                {crawlUpdatedText ? <span>{crawlUpdatedText}</span> : null}
+              </span> : null}
             </span>
             {crawl.durationMs != null ? <span className="tnum faint" style={{ fontSize: 12 }}>{formatDuration(crawl.durationMs)}</span> : null}
             <PhaseBadge tone={crawlTone} label={crawlLabel} />

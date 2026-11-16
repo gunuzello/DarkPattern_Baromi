@@ -121,7 +121,7 @@
   "hasReport": true,
   "currentStage": "product|cart|checkout|surface:<영역>|site-crawl|null",
   "progress": 67,
-  "phaseResults": { "product": { "status": "COVERED", "startedAt": "ISO-8601", "finishedAt": "ISO-8601", "durationMs": 1200, "reason": null, "evidenceIds": ["evidence-id"] } },
+  "phaseResults": { "product": { "status": "COVERED", "startedAt": "ISO-8601", "finishedAt": "ISO-8601", "durationMs": 1200, "reason": null, "evidenceIds": ["evidence-id"] }, "site-crawl": { "status": "RUNNING", "activity": { "visitedScreens": 12, "discoveredScreens": 20, "pendingScreens": 8, "visitedUrls": 9, "discoveredUrls": 14, "updatedAt": "ISO-8601" } } },
   "coverage": { "product": "COVERED", "cart": "PENDING", "checkout": "PENDING" },
   "surfaceCoverage": { "SEARCH": "COVERED", "LOGIN": "DISCOVERED" },
   "summary": { "suspected": 1, "reviewNeeded": 0, "notTested": 0 }
@@ -131,6 +131,8 @@
 `hasReport`는 종료 상태와 별개로 실제 보고서 조회가 가능한지 나타낸다. 실패 종료라도 수집된 증거와 16개 유형별 미검사 사유를 담은 보고서가 저장되면 `true`이며, 이 경우 진행 화면은 실패 원인과 함께 보고서 열기 동작을 제공한다. Spring의 `reportAvailable`도 공개 응답에서는 `hasReport`로 정규화한다.
 
 `phaseResults`에는 구매 단계, 별도 탐색 영역, 전체 크롤링 단계의 실제 상태·시간·근거 ID·미완료 사유가 포함된다. 단계 도중 예외가 발생하면 실패한 단계는 `FAILED`, 뒤에 남은 단계는 `SKIPPED`로 끝난다. 실행을 시작하기 전에 실패한 작업도 구매 단계 실패와 나머지 단계 건너뜀으로 저장한다. 프론트는 이 값을 기준으로 실행 중과 미검사를 구분한다.
+
+동적 진단에서 `phaseResults.site-crawl.activity`는 방문·발견·대기 화면 상태 수, 고유 URL 방문·발견 수, 마지막 진행 갱신 시각을 제공한다. 화면 상태 수는 같은 URL에서 조작으로 바뀐 별도 상태를 포함하므로 고유 URL 수와 다를 수 있다. `progress`는 완료된 진단 단계 비율이며, 크롤링 중 세부 활동은 `activity`를 기준으로 함께 표시한다.
 
 프론트는 `QUEUED`/`RUNNING` 동안 1~2초 간격으로 조회하고, `COMPLETED`/`PARTIAL`/`CANCELLED`/`FAILED`에서 중지한다.
 
