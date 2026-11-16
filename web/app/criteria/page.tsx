@@ -29,11 +29,10 @@ const detail: Record<FindingType, { evidence: string; limit: string }> = {
 export default function CriteriaPage() {
   return (
     <SitePage
-      eyebrow="탐지 기준"
       title={<>매번 같은 16가지를<br />같은 기준으로 봐요</>}
       lede="모든 보고서에 16가지 유형이 빠짐없이 들어가요. 유형이 들어 있다고 모든 쇼핑몰에서 자동 판정이 가능하다는 뜻은 아니에요. 필요한 증거가 없으면 이유와 함께 미검사로 표시해요."
     >
-      <DocBlock kicker="16" title="점검 유형">
+      <DocBlock title="점검 유형">
         <div className="table-wrap panel">
           <table className="table criteria-table">
             <thead><tr><th style={{ width: 44 }}>#</th><th>유형</th><th>증거 방향</th><th>현재 한계</th></tr></thead>

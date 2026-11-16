@@ -297,10 +297,9 @@
   font-size: 13px;
   color: var(--ink-3);
 }
-.rpt-doc__meta > span + span::before {
-  content: "·";
-  margin: 0 10px;
-  color: var(--line-hover);
+/* plain spacing instead of middle-dot separators */
+.rpt-doc__meta {
+  column-gap: 18px;
 }
 .rpt-doc__meta b {
   color: var(--ink);
@@ -439,7 +438,7 @@
   border-left-color: var(--ink);
 }
 .rpt-flow__no {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--ink-3);
@@ -549,7 +548,7 @@
   padding: 7px 10px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--ink-3);
 }
@@ -591,7 +590,7 @@
 .rpt-ids {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 .rpt-lines {
@@ -870,4 +869,89 @@ a:hover .logo__word {
   .story__inline-screen {
     display: flex;
   }
+}
+
+/* ---------- audit fixes ---------- */
+/* Logo links never show the default link underline (it propagates into the wordmark). */
+a:has(> .logo),
+.side__brand {
+  text-decoration: none;
+}
+
+/* Service shell on phones: logo and account on the first row, the menu on its own row. */
+@media (max-width: 900px) {
+  .side {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .side__nav {
+    order: 3;
+    flex: 1 0 100%;
+    min-width: 0;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .side__nav .nav-link {
+    flex: none;
+    white-space: nowrap;
+  }
+  .side > :not(.side__brand):not(.side__nav):not(.side__foot) {
+    margin-left: auto;
+  }
+}
+
+/* History table becomes one card per scan on phones. */
+@media (max-width: 720px) {
+  .history-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .history-table,
+  .history-table tbody,
+  .history-table tr,
+  .history-table td {
+    display: block;
+    width: 100%;
+  }
+  .history-table tr {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .history-table td {
+    padding: 3px 0;
+    border: 0;
+    text-align: left !important;
+  }
+  .history-table td[data-label] {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .history-table td[data-label]::before {
+    content: attr(data-label);
+    font-size: 13px;
+    color: var(--ink-3);
+    flex: none;
+  }
+  .history-table__date {
+    font-size: 15px;
+    padding-bottom: 6px !important;
+  }
+  .history-table__actions {
+    display: flex !important;
+    gap: 4px;
+    padding-top: 8px !important;
+  }
+}
+
+.rpt-finding__tag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }

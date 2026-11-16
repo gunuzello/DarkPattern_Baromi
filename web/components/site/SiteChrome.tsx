@@ -86,7 +86,7 @@ export function SiteFooter() {
 }
 
 /** Marketing sub-page: top header, editorial head, content, closing band, footer. */
-export function SitePage({ eyebrow, title, lede, children }: { eyebrow: string; title: ReactNode; lede: string; children: ReactNode }) {
+export function SitePage({ eyebrow, title, lede, children }: { eyebrow?: string; title: ReactNode; lede: string; children: ReactNode }) {
   return (
     <div className="lp">
       <a href="#main" className="skip-link">본문으로 건너뛰기</a>
@@ -94,7 +94,7 @@ export function SitePage({ eyebrow, title, lede, children }: { eyebrow: string; 
       <main id="main">
         <section className="doc-head">
           <div className="lp-wrap">
-            <p className="eyebrow">{eyebrow}</p>
+            {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
             <h1 className="t-display" style={{ fontSize: "clamp(36px, 4.4vw, 52px)" }}>{title}</h1>
             <p className="doc-head__lede">{lede}</p>
           </div>

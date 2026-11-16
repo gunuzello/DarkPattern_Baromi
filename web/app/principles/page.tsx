@@ -14,11 +14,10 @@ const never: { icon: IconName; title: string; body: string }[] = [
 export default function PrinciplesPage() {
   return (
     <SitePage
-      eyebrow="안전 원칙"
       title={<>안전한 경계 안에서만<br />탐색해요</>}
       lede="바로미는 쇼핑몰 운영자가 허락한 범위에서, 실제 구매자에게 영향을 주지 않는 방식으로만 화면을 확인해요. 할 수 없는 것을 먼저 정해 두고 진단해요."
     >
-      <DocBlock kicker="01" title="바로미가 하지 않는 것">
+      <DocBlock title="바로미가 하지 않는 것">
         <ul className="grid-2 never-list">
           {never.map((item) => (
             <li key={item.title}>
@@ -29,7 +28,7 @@ export default function PrinciplesPage() {
           ))}
         </ul>
       </DocBlock>
-      <DocBlock kicker="02" title="테스트 계정과 개인정보">
+      <DocBlock title="테스트 계정과 개인정보">
         <ul className="checklist" style={{ color: "var(--ink)" }}>
           <li><Icon name="check" size={16} color="var(--link)" />테스트 계정은 동적 진단 요청에만 쓰고 서버에서 암호화해요.</li>
           <li><Icon name="check" size={16} color="var(--link)" />비밀번호, 세션 쿠키, 개인정보는 보고서·로그·샘플 데이터에 남기지 않아요.</li>
@@ -38,10 +37,10 @@ export default function PrinciplesPage() {
         </ul>
         <p className="faint" style={{ fontSize: 14 }}>입력란 마스킹은 화면에 평문으로 나온 개인정보까지 완벽히 지운다고 보장하지 않아요. 운영자가 만든 전용 테스트 계정을 써 주세요.</p>
       </DocBlock>
-      <DocBlock kicker="03" title="결과를 과장하지 않기">
+      <DocBlock title="결과를 과장하지 않기">
         <p className="muted">확인하지 못한 항목을 정상으로 표시하지 않아요. 타임아웃은 멈춤을 막는 안전장치일 뿐이고, 실제 실행 시간과 단계별 시간은 보고서에 그대로 남겨요. 진단 결과는 법률 판단이 아니에요.</p>
       </DocBlock>
-      <DocBlock kicker="04" title="세션과 삭제">
+      <DocBlock title="세션과 삭제">
         <p className="muted">쇼핑몰과 진단 기록은 이 브라우저의 HttpOnly 세션에 묶여요. 끝난 진단과 증거, 진행 중인 진단이 없는 쇼핑몰은 언제든 삭제할 수 있어요.</p>
       </DocBlock>
     </SitePage>

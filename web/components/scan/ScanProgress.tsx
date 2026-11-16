@@ -10,7 +10,7 @@ import { ScanStatusBadge } from "@/components/ui/Status";
 import { Tracker, type TrackerState } from "@/components/ui/Tracker";
 import { api, errorMessage, ApiError } from "@/lib/api";
 import { readFlag, useBackToRegistration } from "@/lib/session";
-import { rules, scanStatusLabels, stageLabels, surfaceLabels } from "@/lib/labels";
+import { rules, scanDurationHint, scanStatusLabels, stageLabels, surfaceLabels } from "@/lib/labels";
 import { formatDuration, pathLabel, viewportLabel } from "@/lib/format";
 import { phaseFor, phaseStatusLabels, phaseTone, surfacePhase } from "@/lib/phases";
 import { stages, surfaceKinds, type PhaseStatus, type ScanState } from "@/lib/types";
@@ -123,6 +123,9 @@ export function ScanProgress({ id }: { id: string }) {
     return { name: stageLabels[stage], state: trackerState[phase.status], note: phaseStatusLabels[phase.status] + time };
   });
   const crawl = phaseFor(scan, "site-crawl");
+  const crawlReported = Boolean(scan.phaseResults?.["site-crawl"]?.status);
+  const crawlLabel = crawlReported ? phaseStatusLabels[crawl.status] : active ? "대기" : "기록 없음";
+  const crawlTone = crawlReported ? phaseTone[crawl.status] : active ? "wait" : "skip";
   const running = [
     ...stages.filter((stage) => phaseFor(scan, stage).status === "RUNNING").map((stage) => stageLabels[stage]),
     ...surfaceKinds.filter((kind) => phaseFor(scan, surfacePhase(kind)).status === "RUNNING").map((kind) => surfaceLabels[kind]),
@@ -141,7 +144,7 @@ export function ScanProgress({ id }: { id: string }) {
         actions={<>
           {active ? <Button variant="secondary" onClick={() => setConfirm(true)} disabled={pending || scan.cancelRequested}>진단 중단</Button> : null}
           {!active && !reportReady ? <Button variant="secondary" icon="refresh" onClick={retry} loading={pending} loadingText="요청 중">같은 조건으로 재진단</Button> : null}
-          {reportReady ? <ButtonLink href={`/report/${encodeURIComponent(id)}`}>진단 결과 보기</ButtonLink> : null}
+          {reportReady && !scan.summary ? <ButtonLink href={`/report/${encodeURIComponent(id)}`}>진단 결과 보기</ButtonLink> : null}
         </>}
       />
 
@@ -157,6 +160,7 @@ export function ScanProgress({ id }: { id: string }) {
           <div style={{ display: "flex", gap: 32 }}>
             <Stat label="위험 신호" value={scan.summary.suspected} kind="risk" />
             <Stat label="검토 필요" value={scan.summary.reviewNeeded} kind="review" />
+            {scan.summary.notObserved != null ? <Stat label="미관찰" value={scan.summary.notObserved} kind="clear" /> : null}
             <Stat label="미검사" value={scan.summary.notTested} kind="none" />
           </div>
           <ButtonLink href={`/report/${encodeURIComponent(id)}`} size="lg">진단 결과 보기</ButtonLink>
@@ -171,7 +175,7 @@ export function ScanProgress({ id }: { id: string }) {
             <span className="tnum" style={{ fontSize: 48, lineHeight: 1, letterSpacing: "-0.03em", fontWeight: 800 }}>{scan.progress}%</span>
             <span className="muted" style={{ fontSize: 15, fontWeight: 600 }}>{stopping ? "중단 요청 처리 중" : scanStatusLabels[scan.status]}</span>
           </div>
-          <span className="faint" style={{ fontSize: 14 }}>보통 30초~3분 걸려요</span>
+          <span className="faint" style={{ fontSize: 14 }}>{active ? scanDurationHint : scan.durationMs != null ? `소요 시간 ${formatDuration(scan.durationMs)}` : ""}</span>
         </div>
         <div className="progress" role="progressbar" aria-label="진단 진행률" aria-valuenow={scan.progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${scan.progress}%` }} /></div>
         <Tracker steps={steps} />
@@ -182,7 +186,7 @@ export function ScanProgress({ id }: { id: string }) {
               {crawl.reason ? <span className="faint" style={{ fontSize: 12, overflowWrap: "anywhere" }}>{crawl.reason}</span> : null}
             </span>
             {crawl.durationMs != null ? <span className="tnum faint" style={{ fontSize: 12 }}>{formatDuration(crawl.durationMs)}</span> : null}
-            <PhaseBadge tone={phaseTone[crawl.status]} label={phaseStatusLabels[crawl.status]} />
+            <PhaseBadge tone={crawlTone} label={crawlLabel} />
           </div>
         ) : null}
         <div aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 16, borderTop: "1px solid var(--line)", fontSize: 15 }}>

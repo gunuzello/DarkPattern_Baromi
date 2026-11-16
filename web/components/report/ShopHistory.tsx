@@ -115,6 +115,7 @@ export function ShopHistory({ shopId }: { shopId: string }) {
           <ButtonLink href="/scan/new" icon="plus">새 진단</ButtonLink>
         </>}
       />
+      {hasActive ? <p className="faint" style={{ fontSize: 13, marginTop: -16 }}>진행 중인 진단이 끝나면 쇼핑몰을 삭제할 수 있어요.</p> : null}
 
       {error ? (
         <Alert kind="error" title="진단 이력을 불러오지 못했어요" actions={<Button variant="secondary" size="sm" icon="refresh" onClick={() => setAttempt((n) => n + 1)}>다시 불러오기</Button>}>
@@ -150,7 +151,7 @@ export function ShopHistory({ shopId }: { shopId: string }) {
             </span>
           </div>
           <div className="table-wrap">
-            <table className="table">
+            <table className="table history-table">
               <thead>
                 <tr><th scope="col">진단 일시</th><th scope="col">상태</th><th scope="col">범위</th><th scope="col">환경과 경로</th><th scope="col">결과</th><th scope="col" className="num">소요 시간</th><th scope="col"><span className="sr-only">동작</span></th></tr>
               </thead>
@@ -160,20 +161,20 @@ export function ShopHistory({ shopId }: { shopId: string }) {
                   const hasResult = group(item) === "done";
                   return (
                     <tr key={item.scanId}>
-                      <td className="tnum" style={{ whiteSpace: "nowrap", fontWeight: 600 }}>{formatDateTime(item.createdAt)}</td>
-                      <td><ScanStatusBadge status={item.status} /></td>
-                      <td>{item.executionMode === "DYNAMIC" ? "전체 구매 흐름" : "공개 화면"}</td>
-                      <td className="muted">{viewportLabel(item.viewport)}, {pathLabel(item.purchasePath)}</td>
-                      <td>
+                      <td className="tnum history-table__date" style={{ whiteSpace: "nowrap", fontWeight: 600 }}>{formatDateTime(item.createdAt)}</td>
+                      <td data-label="상태"><ScanStatusBadge status={item.status} /></td>
+                      <td data-label="범위">{item.executionMode === "DYNAMIC" ? "전체 구매 흐름" : "공개 화면"}</td>
+                      <td data-label="환경과 경로" className="muted">{viewportLabel(item.viewport)}, {pathLabel(item.purchasePath)}</td>
+                      <td data-label="결과">
                         {hasResult ? (
-                          <span style={{ display: "inline-flex", gap: 6 }}>
-                            <span className="badge"><Mark kind="risk" />위험 <span className="tnum">{item.summary.suspected}</span></span>
-                            <span className="badge"><Mark kind="review" />확인 <span className="tnum">{item.summary.reviewNeeded}</span></span>
+                          <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 6 }}>
+                            <span className="badge"><Mark kind="risk" />위험 신호 <span className="tnum">{item.summary.suspected}</span></span>
+                            <span className="badge"><Mark kind="review" />검토 필요 <span className="tnum">{item.summary.reviewNeeded}</span></span>
                           </span>
                         ) : <span className="faint">—</span>}
                       </td>
-                      <td className="num muted">{formatDuration(item.durationMs)}</td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td data-label="소요 시간" className="num muted">{formatDuration(item.durationMs)}</td>
+                      <td className="history-table__actions" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         <Link href={next.href} className="btn btn--tertiary btn--sm">{next.label}<Icon name="chevron" size={14} /></Link>
                         {group(item) !== "active" ? (
                           <button type="button" className="btn btn--tertiary btn--sm" style={{ color: "var(--ink-2)" }} onClick={() => { setDialogError(""); setRemoveScan(item); }} aria-label={`${formatDateTime(item.createdAt)} 진단 삭제`}>삭제</button>

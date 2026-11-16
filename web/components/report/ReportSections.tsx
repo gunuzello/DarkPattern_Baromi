@@ -35,7 +35,7 @@ export function FlowTrack({ report }: { report: Report }) {
           const time = phase.durationMs ?? report.stageTimingsMs?.[stage];
           return (
             <li key={stage} className={`rpt-flow__step is-${risk ? "risk" : review ? "review" : tone}`}>
-              <span className="rpt-flow__no tnum">STAGE {String(index + 1).padStart(2, "0")}</span>
+              <span className="rpt-flow__no tnum">{index + 1}단계</span>
               <span className="rpt-flow__name">{stageLabels[stage]}</span>
               <span className="rpt-flow__state"><PhaseBadge tone={tone} label={phaseStatusLabels[phase.status]} />{time ? <span className="tnum faint">{formatDuration(time)}</span> : null}</span>
               <span className="rpt-flow__note">
@@ -45,7 +45,7 @@ export function FlowTrack({ report }: { report: Report }) {
           );
         })}
         <li className="rpt-flow__step is-end">
-          <span className="rpt-flow__no">STOP</span>
+          <span className="rpt-flow__no">여기서 멈춤</span>
           <span className="rpt-flow__name">최종 결제</span>
           <span className="rpt-flow__note" style={{ color: "var(--clear-ink)", fontWeight: 600 }}>결제·주문 확정은 실행하지 않음</span>
         </li>
@@ -115,7 +115,7 @@ export function CoverageTable({ report }: { report: Report }) {
     <section aria-labelledby="coverage-head" className="rpt-section">
       <div className="rpt-section__head">
         <h2 id="coverage-head" className="rpt-section__title">검사 범위</h2>
-        <span className="faint tnum" style={{ fontSize: 13 }}>미검사 {report.summary.notTested}</span>
+        <span className="faint tnum" style={{ fontSize: 13 }}>{rows.length}곳 중 검사 완료 {rows.filter((row) => row.phase.status === "COVERED").length}곳</span>
       </div>
       <div className="table-wrap">
         <table className="rpt-table">

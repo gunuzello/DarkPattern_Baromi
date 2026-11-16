@@ -154,7 +154,7 @@ export function ScanForm() {
               </button>
               <button type="button" className="choice" aria-pressed={full} onClick={() => setMode("full")}>
                 <span className="choice__title">전체 구매 흐름 진단</span>
-                <span className="choice__body">상점 소유를 확인하고 장바구니와 주문서까지 확인해요. 보통 30초~3분.</span>
+                <span className="choice__body">상점 소유를 확인하고 장바구니와 주문서까지 확인해요. 보통 1분 안팎.</span>
               </button>
             </div>
           </fieldset>

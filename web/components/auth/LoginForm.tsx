@@ -70,7 +70,12 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <form className="auth-form" onSubmit={submit}>
-      {!configured ? <Alert kind="error" title="로그인 설정이 필요해요">프론트 환경에 Supabase URL과 공개 키를 설정해 주세요.</Alert> : null}
+      {!configured ? (
+        <Alert kind="brand" title="로그인을 준비하고 있어요">
+          지금은 로그인 없이도 진단을 시작하고, 이 브라우저에서 내 쇼핑몰과 보고서를 볼 수 있어요.
+          {process.env.NODE_ENV !== "production" ? " (개발 안내: NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 설정하세요.)" : ""}
+        </Alert>
+      ) : null}
       <label className="field">
         <span className="field__label">이메일</span>
         <input className="input" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
@@ -82,12 +87,12 @@ export function LoginForm({ next }: { next: string }) {
       <Button type="submit" block disabled={!configured || busy} loading={busy} loadingText="처리 중">
         {mode === "login" ? "로그인" : "계정 만들기"}
       </Button>
-      <Button type="button" variant="secondary" block disabled={busy} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); setError(""); }}>
-        {mode === "login" ? "처음 오셨나요? 계정 만들기" : "이미 계정이 있나요? 로그인"}
+      <Button type="button" variant="secondary" block disabled={busy || !configured} onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); setError(""); }}>
+        {mode === "login" ? "계정 만들기" : "이미 계정이 있어요. 로그인"}
       </Button>
       {error ? <Alert kind="error" title="인증에 실패했어요">{error}</Alert> : null}
       {message ? <Alert kind="brand" title="가입 요청을 접수했어요">{message}</Alert> : null}
-      <p className="faint" style={{ fontSize: 13 }}>비밀번호는 Supabase Auth에서 처리하며 바로미 진단 기록에 저장하지 않아요.</p>
+      <p className="faint" style={{ fontSize: 13 }}>비밀번호는 인증 서비스에서만 처리하고 바로미 진단 기록에는 저장하지 않아요.</p>
     </form>
   );
 }

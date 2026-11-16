@@ -9,6 +9,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ResultBadge, ScanStatusBadge } from "@/components/ui/Status";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError, errorMessage, isDemo, usesSample } from "@/lib/api";
+import { sampleEvidenceLines } from "@/lib/demo";
 import { useBackToRegistration } from "@/lib/session";
 import { blockerText, collectionFailureLabels, ruleByType, stageLabels } from "@/lib/labels";
 import { checkResults, type CheckResult } from "@/lib/checks";
@@ -135,7 +136,8 @@ export function ScanReport({ id }: { id: string }) {
     : count("risk") + count("review") === 0
       ? "검사한 범위에서 위험 신호를 관찰하지 못했어요"
       : `위험 신호 ${count("risk")}건, 검토 필요 ${count("review")}건이 있어요`;
-  const linesFor = (finding: Finding) => report.priceLedger?.stages.find((stage) => stage.stage === finding.stage)?.displayedLines;
+  const linesFor = (finding: Finding) => (sample ? sampleEvidenceLines[finding.id] : undefined)
+    ?? report.priceLedger?.stages.find((stage) => stage.stage === finding.stage)?.displayedLines;
 
   return (
     <div className="rpt">
@@ -152,7 +154,7 @@ export function ScanReport({ id }: { id: string }) {
           )}
         </nav>
         <div className="rpt-topbar__actions">
-          <span className="mono faint" style={{ fontSize: 12 }}>REPORT {id.slice(0, 8)}</span>
+          <span className="faint" style={{ fontSize: 12 }}>보고서 번호 <span className="mono">{id.slice(0, 8)}</span></span>
           <Button variant="tertiary" size="sm" onClick={copyLink}>링크 복사</Button>
           <Button variant="tertiary" size="sm" onClick={() => window.print()}>인쇄</Button>
           {sample
@@ -257,7 +259,8 @@ export function ScanReport({ id }: { id: string }) {
               ) : null}
               {candidates.length ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700 }}>유형별 맥락 근거</h3>
+                  <h3 style={{ fontSize: 15, fontWeight: 700 }}>운영자 검토 기록</h3>
+                  <p className="muted" style={{ fontSize: 13 }}>직접 확인한 결과를 남기면 다음 진단과 AI 평가에 참고해요.</p>
                   <ReviewCandidates scanId={id} candidates={candidates} />
                 </div>
               ) : null}
@@ -277,8 +280,8 @@ export function ScanReport({ id }: { id: string }) {
                     <tr key={result.type} className={`is-${result.kind}`}>
                       <td className="tnum faint">{String(index + 1).padStart(2, "0")}</td>
                       <td>
-                        <span style={{ display: "block", fontWeight: 600 }}>{ruleByType[result.type].title}</span>
-                        <span className="faint" style={{ fontSize: 12 }}>{result.name}</span>
+                        <span style={{ display: "block", fontWeight: 600 }}>{result.name}</span>
+                        <a className="faint" style={{ fontSize: 12 }} href={ruleByType[result.type].source} target="_blank" rel="noreferrer">{ruleByType[result.type].reference}</a>
                       </td>
                       <td><ResultBadge kind={result.kind} /></td>
                       <td>
@@ -309,7 +312,7 @@ export function ScanReport({ id }: { id: string }) {
                     <div key={label}>
                       <span style={{ fontSize: 14, fontWeight: 700 }}>{label} <span className="tnum faint">{signals.length}</span></span>
                       <ul>
-                        {signals.map((signal, index) => <li key={index}>{stageLabels[signal.stage]} · {ruleByType[signal.type]?.title ?? signal.type}</li>)}
+                        {signals.map((signal, index) => <li key={index}>{ruleByType[signal.type]?.name ?? signal.type} ({stageLabels[signal.stage]})</li>)}
                       </ul>
                     </div>
                   ))}
@@ -346,12 +349,14 @@ export function ScanReport({ id }: { id: string }) {
             </dl>
           </div>
 
-          <div className="rpt-box rpt-box--brand">
-            <span className="rpt-chip rpt-chip--brand" style={{ alignSelf: "flex-start" }}>유료 후속 기능</span>
-            <span className="rpt-box__title">AI 정밀 분석</span>
-            <p>검토 필요 후보 {candidates.length}건만 별도로 분석해요. 기존 증거와 판정은 덮어쓰지 않아요.</p>
-            <a href="#ai" className="btn btn--secondary btn--md btn--block">{report.aiReview ? "분석 상태 보기" : "자세히 보기"}</a>
-          </div>
+          {candidates.length || report.aiReview ? (
+            <div className="rpt-box rpt-box--brand">
+              <span className="rpt-chip rpt-chip--brand" style={{ alignSelf: "flex-start" }}>유료 후속 기능</span>
+              <span className="rpt-box__title">AI 정밀 분석</span>
+              <p>검토 필요 {candidates.length}건을 AI로 한 번 더 살펴봐요. 기존 증거와 판정은 덮어쓰지 않아요.</p>
+              <a href="#ai" className="btn btn--secondary btn--md btn--block">{report.aiReview ? "분석 상태 보기" : "자세히 보기"}</a>
+            </div>
+          ) : null}
 
           {publicSample ? null : (
             <div className="rpt-box">

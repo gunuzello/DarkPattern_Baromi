@@ -79,7 +79,9 @@ export function AiReviewPanel({ report, candidates, onRequested }: { report: Rep
         </div>
       ) : null}
       {error ? <Alert kind="error" title={error} /> : null}
-      <span className="tnum faint" style={{ fontSize: 13 }}>기본 진단의 AI 비용 {(report.aiUsage?.estimatedCostUsd ?? 0).toFixed(6)} USD, 호출 {report.aiUsage?.calls ?? 0}회</span>
+      {report.aiUsage?.calls ? (
+        <span className="tnum faint" style={{ fontSize: 13 }}>이 진단에서 AI를 {report.aiUsage.calls}회 호출했어요.</span>
+      ) : null}
     </section>
   );
 }

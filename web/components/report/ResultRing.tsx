@@ -1,4 +1,5 @@
 import type { CheckResult } from "@/lib/checks";
+import { resultLabels } from "@/components/ui/Status";
 
 const color: Record<CheckResult["kind"], string> = {
   risk: "var(--risk)",
@@ -19,10 +20,10 @@ export function ResultRing({ results }: { results: CheckResult[] }) {
   const c = 2 * Math.PI * r;
   const gap = 2.2;
   const seg = c / total - gap;
-  const label = order.map((kind) => `${kind}: ${results.filter((x) => x.kind === kind).length}`).join(", ");
+  const label = order.map((kind) => `${resultLabels[kind]} ${results.filter((x) => x.kind === kind).length}`).join(", ");
   const flagged = results.filter((x) => x.kind === "risk" || x.kind === "review").length;
   return (
-    <svg className="rpt-ring" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label={`16개 항목 결과 분포 (${label})`}>
+    <svg className="rpt-ring" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label={`16개 항목 중 주의 ${flagged}개 (${label})`}>
       {sorted.map((result, index) => (
         <circle
           key={result.type}
@@ -35,8 +36,8 @@ export function ResultRing({ results }: { results: CheckResult[] }) {
           transform="rotate(-90 48 48)"
         />
       ))}
-      <text x="48" y="47" textAnchor="middle" fontSize="20" fontWeight="800" fill="var(--ink)" className="tnum">{flagged}</text>
-      <text x="48" y="62" textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--ink-3)">/ {total} 항목</text>
+      <text x="48" y="48" textAnchor="middle" fontSize="22" fontWeight="800" fill="var(--ink)" className="tnum">{flagged}</text>
+      <text x="48" y="64" textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--ink-2)">{total}개 중 주의</text>
     </svg>
   );
 }

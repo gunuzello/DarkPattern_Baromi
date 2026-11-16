@@ -11,14 +11,15 @@ export function FindingRows({ report, findings, tone, linesFor }: {
 }) {
   return (
     <ol className={`rpt-findings rpt-findings--${tone}`}>
-      {findings.map((finding, index) => {
+      {findings.map((finding) => {
         const rule = ruleByType[finding.type];
         const tag = comparisonTag(report, finding);
         return (
           <li key={finding.id} className="rpt-finding">
             <div className="rpt-finding__text">
               <span className="rpt-finding__tag">
-                {tone === "risk" ? "위험 신호" : "검토 필요"} #{index + 1} · {stageLabels[finding.stage]}{tag ? ` · 지난 진단 대비 ${tag}` : ""}
+                {stageLabels[finding.stage]}에서 관찰
+                {tag ? <span className="rpt-chip">{tag === "재발견" ? "지난 진단에도 있었어요" : "이번에 새로 발견"}</span> : null}
               </span>
               <h3 className="rpt-finding__title">{rule.name}</h3>
               <p className="rpt-finding__body">{finding.reason}</p>

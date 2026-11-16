@@ -23,7 +23,7 @@ export function EvidenceShot({ scanId, stage, area, element, priceLines }: {
   if (sample || failed) {
     return (
       <div className="evidence-placeholder" role="img" aria-label={`${stageLabels[stage]} 화면의 가격 기록`}>
-        <span className="t-caption">{sample ? "예시 보고서에는 스크린샷 대신 가격 기록을 보여드려요" : "스크린샷을 불러오지 못했어요"}</span>
+        <span className="t-caption">{sample ? "예시 보고서라 스크린샷 대신 화면에서 읽은 기록을 보여드려요" : "스크린샷을 불러오지 못했어요"}</span>
         {priceLines?.length ? (
           <ul className="tnum">{priceLines.map((line, index) => <li key={index}>{line}</li>)}</ul>
         ) : null}

@@ -24,15 +24,14 @@ const faqs = [
 export default function AboutPage() {
   return (
     <SitePage
-      eyebrow="서비스 소개"
       title={<>구매 흐름의 위험 신호를<br />증거와 함께 점검해요</>}
       lede="바로미는 쇼핑몰의 공개 화면과 권한을 확인한 테스트 계정으로 구매 흐름을 안전하게 따라가며, 가격·선택 상태·문구·화면 구조를 측정해 다크패턴 위험 신호와 재현 가능한 근거, 수정 방향을 정리해요."
     >
-      <DocBlock kicker="01" title="누구를 위한 서비스인가">
+      <DocBlock title="누구를 위한 서비스인가">
         <p className="muted">국내 소상공인과 온라인 쇼핑몰 운영자를 위해 만들었어요. 상세 페이지, 장바구니, 주문서를 고칠 때마다 비용·옵션·가입 조건과 취소 경로를 손으로 다시 확인하기 어려운 팀에게 맞아요.</p>
         <p className="faint" style={{ fontSize: 14 }}>카페24 자사몰을 먼저 검증하고 있지만, 특정 플랫폼에만 맞춘 규칙은 만들지 않아요.</p>
       </DocBlock>
-      <DocBlock kicker="02" title="어떤 문제를 푸는가">
+      <DocBlock title="어떤 문제를 푸는가">
         <ul className="checklist" style={{ color: "var(--ink)" }}>
           <li><Icon name="check" size={16} color="var(--link)" />상품 상세에 없던 비용이 주문서에서 처음 나타나는지</li>
           <li><Icon name="check" size={16} color="var(--link)" />유료 옵션이 사용자가 고르기 전부터 선택돼 있는지</li>
@@ -41,13 +40,13 @@ export default function AboutPage() {
         </ul>
         <p className="muted">확인하지 못한 항목은 정상으로 표시하지 않고, 무엇을 왜 확인하지 못했는지 함께 알려드려요.</p>
       </DocBlock>
-      <DocBlock kicker="03" title="보고서에 담기는 것">
+      <DocBlock title="보고서에 담기는 것">
         <dl className="doc-dl">
           {outputs.map(([term, desc]) => (<div key={term}><dt>{term}</dt><dd>{desc}</dd></div>))}
         </dl>
         <p className="faint" style={{ fontSize: 14 }}>화면에서 본 보고서와 같은 내용을 JSON으로 내려받을 수 있어요.</p>
       </DocBlock>
-      <DocBlock kicker="04" title="자주 묻는 질문">
+      <DocBlock title="자주 묻는 질문">
         <Faq items={faqs} />
       </DocBlock>
     </SitePage>

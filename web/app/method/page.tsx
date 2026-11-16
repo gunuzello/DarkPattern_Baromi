@@ -8,7 +8,6 @@ export const metadata: Metadata = { title: "분석 방법", description: "등록
 export default function MethodPage() {
   return (
     <SitePage
-      eyebrow="분석 방법"
       title={<>측정할 수 있는 사실은<br />코드로 모아요</>}
       lede="체크박스 선택, 금액 변화, 화면 요소 위치, 단계별 페이지, 가격 응답을 직접 기록하고 규칙으로 판정해요. 의미 해석이 모호한 소수 후보만 사람이나 별도 AI 검토로 넘겨요."
     >
@@ -43,7 +42,7 @@ export default function MethodPage() {
           <div><dt>미검사</dt><dd>범위에 도달하지 못했거나 차단돼 판단할 수 없어요. 이유를 함께 보여드려요.</dd></div>
         </dl>
       </DocBlock>
-      <DocBlock kicker="06" title="검증 현황 공개">
+      <DocBlock title="검증 현황 공개">
         <p className="muted">지금은 로컬에서 진단 시작부터 16가지 유형 보고서 열람·다운로드까지 한 번에 경험하는 것을 목표로 검증하고 있어요. 승인된 쇼핑몰 반복 실행, 여러 쇼핑몰 호환성, 소형 쇼핑몰 30초 목표가 입증되기 전에는 완성이라고 표시하지 않아요.</p>
       </DocBlock>
     </SitePage>
