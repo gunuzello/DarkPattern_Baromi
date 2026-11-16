@@ -1804,11 +1804,12 @@ a:has(> .logo),
   display: flex;
   flex-direction: column;
   gap: 3px;
-  background: #0f172a;
+  /* deep brand indigo (the brand gradient, darkened) instead of slate navy */
+  background: linear-gradient(115deg, #232c73 0%, #33287a 100%);
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.5;
-  color: #cbd5e1;
+  color: #d4daff;
 }
 .scan-log__line {
   display: flex;
@@ -1822,10 +1823,10 @@ a:has(> .logo),
   width: 10px;
   font-weight: 700;
 }
-.scan-log__line--ok > span { color: #6ee7b7; }
+.scan-log__line--ok > span { color: #7ef0c4; }
 .scan-log__line--warn { color: #fff; }
-.scan-log__line--warn > span { color: #fca5a5; }
-.scan-log__line--info > span { color: #a5b4fc; }
+.scan-log__line--warn > span { color: #ffb0b0; }
+.scan-log__line--info > span { color: #b9c2ff; }
 
 /* motion: runs while the step is on screen (sticky panel) and once on phones */
 .stage-screen[data-on="true"] .live-sweep,
@@ -2345,4 +2346,52 @@ a:has(> .logo),
   gap: 14px;
   padding-top: 16px;
   padding-bottom: 16px;
+}
+
+/* browser window dots: brand board status colors, softened to sit on the light chrome */
+.browser__dots span:nth-child(1) { background: #ff7b7b; }
+.browser__dots span:nth-child(2) { background: #ffc566; }
+.browser__dots span:nth-child(3) { background: #3fcf9b; }
+
+/* price bars: grow in three beats once the chart is in view */
+.price-bars__legend {
+  padding-left: 112px;
+}
+.price-bars__part {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+}
+.price-bars[data-play="false"] .price-bars__part {
+  transform: scaleX(0);
+}
+.price-bars[data-play="false"] .price-bars__amount {
+  opacity: 0;
+}
+.price-bars[data-play="true"] .price-bars__part {
+  transition: transform 0.9s cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+.price-bars[data-play="true"] .price-bars__part--2 {
+  transition-duration: 0.55s;
+  transition-delay: 1s;
+}
+.price-bars[data-play="true"] .price-bars__part--3 {
+  transition-duration: 0.55s;
+  transition-delay: 1.7s;
+}
+.price-bars__amount {
+  transition: opacity 0.35s ease;
+}
+.price-bars[data-play="true"] .price-bars__amount--1 { transition-delay: 0.75s; }
+.price-bars[data-play="true"] .price-bars__amount--2 { transition-delay: 1.45s; }
+.price-bars[data-play="true"] .price-bars__amount--3 { transition-delay: 2.15s; }
+@media (prefers-reduced-motion: reduce) {
+  .price-bars[data-play] .price-bars__part {
+    transform: none;
+    transition: none;
+  }
+  .price-bars[data-play] .price-bars__amount {
+    opacity: 1;
+    transition: none;
+  }
 }

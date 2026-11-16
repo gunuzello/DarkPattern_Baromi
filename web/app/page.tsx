@@ -8,6 +8,7 @@ import { ResultRing } from "@/components/report/ResultRing";
 import { reportItems } from "@/components/report/model";
 import { sampleReport } from "@/lib/demo";
 import { rules } from "@/lib/labels";
+import { PriceBars } from "@/components/landing/PriceBars";
 import { WaitlistForm } from "@/components/landing/WaitlistForm";
 
 const promises: { icon: IconName; title: string; body: string }[] = [
@@ -19,16 +20,6 @@ const promises: { icon: IconName; title: string; body: string }[] = [
 
 const sampleItems = reportItems(sampleReport);
 const sampleCount = (kind: "risk" | "review" | "none" | "clear") => sampleItems.filter((item) => item.kind === kind).length;
-
-function Bar({ label, amount, width, parts }: { label: string; amount: string; width: number; parts: [number, string][] }) {
-  return (
-    <div className="bars__row">
-      <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
-      <span className="bars__track" style={{ width: `${width}%` }}>{parts.map(([w, c], i) => <span key={i} style={{ width: `${w}%`, background: c }} />)}</span>
-      <span className="tnum" style={{ fontSize: 16, fontWeight: 700, textAlign: "right" }}>{amount}</span>
-    </div>
-  );
-}
 
 export default function Home() {
   const hero = (
@@ -116,19 +107,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="lp-result__bars">
-                <span style={{ fontSize: 16, fontWeight: 700 }}>단계별로 보이는 금액</span>
-                <div className="bars" role="img" aria-label="단계별 금액: 상품 상세 29,000원, 장바구니 30,500원(미리 선택된 파손 보장 1,500원 포함), 주문서 33,000원(필수 처리비 2,500원 새로 붙음)">
-                  <Bar label="상품 상세" amount="29,000원" width={88} parts={[[100, "var(--price-base)"]]} />
-                  <Bar label="장바구니" amount="30,500원" width={92} parts={[[95, "var(--price-base)"], [5, "var(--risk)"]]} />
-                  <Bar label="주문서" amount="33,000원" width={100} parts={[[88, "var(--price-base)"], [4.5, "var(--risk)"], [7.5, "var(--review)"]]} />
-                </div>
-                <div className="legend" style={{ paddingLeft: 112 }}>
-                  <span><i style={{ background: "var(--price-base)" }} />상품 금액</span>
-                  <span><i style={{ background: "var(--risk)" }} />미리 선택된 옵션 +1,500원</span>
-                  <span><i style={{ background: "var(--review)" }} />새로 붙은 필수 처리비 +2,500원</span>
-                </div>
-              </div>
+              <PriceBars />
             </div>
           </div>
         </section>
