@@ -2,8 +2,13 @@ import { SiteFooter, SiteHeader } from "@/components/site/SiteChrome";
 import { Story } from "@/components/landing/Story";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { Stat } from "@/components/ui/Stat";
+import Link from "next/link";
+import { Mark, plainLabels, VerdictBadge } from "@/components/ui/Status";
+import { ResultRing } from "@/components/report/ResultRing";
+import { reportItems } from "@/components/report/model";
+import { sampleReport } from "@/lib/demo";
 import { rules } from "@/lib/labels";
+import { PriceBars } from "@/components/landing/PriceBars";
 import { WaitlistForm } from "@/components/landing/WaitlistForm";
 
 const promises: { icon: IconName; title: string; body: string }[] = [
@@ -13,15 +18,8 @@ const promises: { icon: IconName; title: string; body: string }[] = [
   { icon: "lock", title: "추가 인증은 우회하지 않아요", body: "OTP와 보안 문자가 나오면 멈추고, 테스트 계정 비밀번호는 진단 뒤 삭제해요." },
 ];
 
-function Bar({ label, amount, width, parts }: { label: string; amount: string; width: number; parts: [number, string][] }) {
-  return (
-    <div className="bars__row">
-      <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
-      <span className="bars__track" style={{ width: `${width}%` }}>{parts.map(([w, c], i) => <span key={i} style={{ width: `${w}%`, background: c }} />)}</span>
-      <span className="tnum" style={{ fontSize: 16, fontWeight: 700, textAlign: "right" }}>{amount}</span>
-    </div>
-  );
-}
+const sampleItems = reportItems(sampleReport);
+const sampleCount = (kind: "risk" | "review" | "none" | "clear") => sampleItems.filter((item) => item.kind === kind).length;
 
 export default function Home() {
   const hero = (
@@ -55,36 +53,61 @@ export default function Home() {
               <h2 style={{ maxWidth: "12em", fontSize: "clamp(34px, 4vw, 48px)", lineHeight: 1.12, letterSpacing: "-0.035em", fontWeight: 800 }}>결과는 숫자로<br />먼저 보여드려요</h2>
               <p>보고서 첫 화면에서 무엇을 고쳐야 하는지, 금액이 어디서 얼마나 늘었는지 바로 보여요.</p>
             </div>
-            <div className="panel" style={{ borderRadius: 16, overflow: "hidden" }}>
-              <div style={{ padding: "32px 40px", borderBottom: "1px solid var(--line)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span className="sample-badge">예시</span>
-                    <span className="t-caption">linen-house.cafe24.com, 데일리 린넨 셔츠</span>
-                  </span>
-                  <span style={{ fontSize: 28, lineHeight: 1.25, letterSpacing: "-0.02em", fontWeight: 700 }}>위험 신호 3건, 검토 필요 2건이 있어요</span>
+            <div className="panel lp-result">
+              <div className="lp-result__head">
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div className="rv-summary__chips">
+                    <span className="rv-chip rv-chip--state"><span className="rv-dot" />점검 완료</span>
+                    <span className="rv-chip">무료 기본 점검</span>
+                    <span className="rv-chip rv-chip--brand">예시</span>
+                  </div>
+                  <span className="lp-result__title">쇼핑몰 점검 결과</span>
+                  <span className="rv-summary__site">점검한 쇼핑몰 <b>linen-house.cafe24.com</b></span>
                 </div>
-                <ButtonLink href="/report/sample" variant="secondary">예시 보고서 열기</ButtonLink>
+                <ButtonLink href="/report/sample" variant="secondary">예시 결과 열기</ButtonLink>
               </div>
-              <div className="kpi-row">
-                <div><Stat label="위험 신호" value="3" sub="규칙과 증거로 확인" kind="risk" /></div>
-                <div><Stat label="검토 필요" value="2" sub="문구 후보, 운영자 검토" kind="review" /></div>
-                <div><Stat label="안전" value="8" sub="검사한 범위 기준" kind="clear" /></div>
-                <div><Stat label="미검사" value="3" sub="이유와 함께 표시" kind="none" /></div>
-              </div>
-              <div style={{ padding: "32px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-                <span style={{ fontSize: 16, fontWeight: 700 }}>단계별 표시 금액</span>
-                <div className="bars" role="img" aria-label="단계별 표시 금액: 상품 상세 29,000원, 장바구니 30,500원(파손 보장 1,500원 포함), 주문서 33,000원(필수 처리비 2,500원 새로 등장)">
-                  <Bar label="상품 상세" amount="29,000원" width={88} parts={[[100, "var(--price-base)"]]} />
-                  <Bar label="장바구니" amount="30,500원" width={92} parts={[[95, "var(--price-base)"], [5, "var(--risk)"]]} />
-                  <Bar label="주문서" amount="33,000원" width={100} parts={[[88, "var(--price-base)"], [4.5, "var(--risk)"], [7.5, "var(--review)"]]} />
+
+              <div className="lp-result__body">
+                <div className="lp-result__summary">
+                  <ResultRing results={sampleItems} />
+                  <div className="rv-summary__text">
+                    <span className="rv-summary__headline">16가지 중 고쳐야 할 곳 {sampleCount("risk")}곳, 확인할 곳 {sampleCount("review")}곳이 있어요</span>
+                    <p className="rv-summary__note">점검 못 한 {sampleCount("none")}가지는 이유와 예방 방법을 함께 알려드려요. ‘괜찮아요’는 점검한 범위에서 문제가 안 보였다는 뜻이고, 법적으로 문제없다는 보증은 아니에요.</p>
+                    <ul className="rv-counts">
+                      {(["risk", "review", "none", "clear"] as const).map((kind) => (
+                        <li key={kind} className="rv-count" style={{ cursor: "default" }}>
+                          <span className={`rv-count__num rv-count__num--${kind} tnum`}>{sampleCount(kind)}</span>
+                          <span className="rv-count__label"><Mark kind={kind} />{plainLabels[kind]}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <div className="legend" style={{ paddingLeft: 112 }}>
-                  <span><i style={{ background: "var(--price-base)" }} />상품 금액</span>
-                  <span><i style={{ background: "var(--risk)" }} />미리 선택된 옵션 +1,500원</span>
-                  <span><i style={{ background: "var(--review)" }} />새로 붙은 필수 처리비 +2,500원</span>
+
+                <div className="rv-list lp-result__list">
+                  {(["risk", "review"] as const).map((kind) => (
+                    <section key={kind} className={`rv-group rv-group--${kind}`} aria-label={plainLabels[kind]}>
+                      <div className="rv-group__head"><span className="rv-group__title"><VerdictBadge kind={kind} />{plainLabels[kind]}</span></div>
+                      <ul className="rv-rows">
+                        {sampleItems.filter((item) => item.kind === kind).map((item) => (
+                          <li key={item.type}>
+                            <Link href="/report/sample" className="rv-row">
+                              <span className="rv-row__no tnum">{item.no}</span>
+                              <span className="rv-row__text">
+                                <span className="rv-row__title">{item.plain}</span>
+                                <span className="rv-row__summary">{item.summary}</span>
+                              </span>
+                              <Icon name="chevron" size={16} color="var(--ink-3)" />
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
                 </div>
               </div>
+
+              <PriceBars />
             </div>
           </div>
         </section>
