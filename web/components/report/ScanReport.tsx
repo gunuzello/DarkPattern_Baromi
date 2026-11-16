@@ -14,7 +14,8 @@ import { useBackToLogin } from "@/lib/session";
 import { blockerText, collectionFailureLabels, ruleByType, stageLabels } from "@/lib/labels";
 import { formatDuration, hostOf, pathLabel, viewportLabel } from "@/lib/format";
 import type { Finding, Report } from "@/lib/types";
-import { AiRequestDialog, AiStatusBanner } from "./AiReview";
+import { AiDiagnosisBanner, AiRequestDialog, AiStatusBanner } from "./AiReview";
+import { aiDiagnosis, aiDiagnosisMode, type AiDiagnosis } from "@/lib/aiDiagnosis";
 import { aiTargets, reportItems, type ReportItem } from "./model";
 import { CoverageTable, FlowTrack, LedgerTable } from "./ReportSections";
 import { kindOrder, ResultRing } from "./ResultRing";
@@ -47,6 +48,9 @@ export function ScanReport({ id }: { id: string }) {
   const [aiError, setAiError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
+  const aiMode = aiDiagnosisMode(id);
+  const aiHref = `/report/${encodeURIComponent(id)}/ai`;
+  const [diag, setDiag] = useState<AiDiagnosis | null>(null);
   const backToLogin = useBackToLogin();
   const rescanner = useRescan(setError);
   const pending = rescanner.pending;
@@ -55,15 +59,23 @@ export function ScanReport({ id }: { id: string }) {
     try {
       const next = await api.getReport(id);
       setReport(next);
+      if (aiMode !== "legacy") aiDiagnosis.get(id).then(setDiag).catch(() => undefined);
       return next;
     } catch (cause) {
       if (cause instanceof ApiError && cause.sessionLost && !usesSample(id)) { backToLogin(); return undefined; }
       setError(errorMessage(cause, "점검 결과를 불러오지 못했어요."));
       return undefined;
     }
-  }, [id, backToLogin]);
+  }, [id, backToLogin, aiMode]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // AI 정밀 진단 progress shows on the base report too.
+  useEffect(() => {
+    if (diag?.status !== "QUEUED" && diag?.status !== "RUNNING") return;
+    const timer = setTimeout(() => { aiDiagnosis.get(id).then(setDiag).catch(() => undefined); }, 2000);
+    return () => clearTimeout(timer);
+  }, [diag, id]);
 
   // R-07: check every few seconds only while the AI follow-up runs; a reload resumes from the server state.
   useEffect(() => {
@@ -208,7 +220,8 @@ export function ScanReport({ id }: { id: string }) {
 
       {error ? <Alert kind="error" title={error} /> : null}
 
-      {review ? (
+      {aiMode !== "legacy" && diag ? <AiDiagnosisBanner diagnosis={diag} href={aiHref} /> : null}
+      {aiMode === "legacy" && review ? (
         <AiStatusBanner
           review={review}
           targets={targets}
@@ -257,7 +270,7 @@ export function ScanReport({ id }: { id: string }) {
             <span className="rv-pill">{staticMode ? "공개 화면 읽기" : "실제 구매 과정 확인"}</span>
             <span className="rv-pill">{viewportLabel(report.viewport)} · {pathLabel(report.purchasePath)}</span>
             <span className="rv-pill tnum">걸린 시간 {formatDuration(report.durationMs)}</span>
-            <span className="faint">{review?.status === "COMPLETED" ? `AI 의견 ${targets.filter((item) => item.ai.length).length}곳` : "AI 사용 안 함"}</span>
+            <span className="faint">{aiMode !== "legacy" ? (diag?.status === "COMPLETED" ? `AI 정밀 진단 ${diag.requestedTypes.length}개 항목` : "AI 사용 안 함") : review?.status === "COMPLETED" ? `AI 의견 ${targets.filter((item) => item.ai.length).length}곳` : "AI 사용 안 함"}</span>
           </div>
         </section>
 
@@ -267,7 +280,16 @@ export function ScanReport({ id }: { id: string }) {
             <p>{publicSample ? "주소만 넣으면 같은 형식의 결과를 받아볼 수 있어요." : "고친 뒤 같은 상품·화면·경로로 다시 점검하고, 이번 결과와 비교해요."}</p>
             <Button variant="inverse" block onClick={rescan} loading={pending} loadingText="요청 중">{publicSample ? "무료로 점검하기" : "지금 다시 점검하기"}</Button>
           </div>
-          {targets.length ? (
+          {aiMode !== "legacy" ? (
+            <div className="rv-card rv-card--brand">
+              <span className="rv-card__kicker">유료 · AI 정밀 진단</span>
+              <span className="rv-card__title">원하는 항목을 골라 AI가 한 번 더 판단해 드려요</span>
+              <p>16가지 중 어떤 항목이든 고를 수 있어요. AI는 위험, 부분적 안전, 안전으로 판단하고, 결과는 기본 점검과 따로 리포트로 보여드려요.</p>
+              <ButtonLink variant="secondary" block href={aiHref}>
+                {diag?.status === "COMPLETED" ? "AI 리포트 보기" : diag?.status === "QUEUED" || diag?.status === "RUNNING" ? "AI 진단 진행 보기" : "AI 꼼꼼 점검 받기"}
+              </ButtonLink>
+            </div>
+          ) : targets.length ? (
             <div className="rv-card rv-card--brand">
               <span className="rv-card__kicker">유료 · AI 꼼꼼 점검</span>
               <span className="rv-card__title">확인해 보세요 {targets.length}곳을 AI가 한 번 더 봐 드려요</span>
@@ -329,8 +351,8 @@ export function ScanReport({ id }: { id: string }) {
                 item={current}
                 linesFor={linesFor}
                 aiBusy={aiBusy}
-                canRequestAi={canRequestAi}
-                onRequestAi={() => { setAiError(""); setAiOpen(true); }}
+                canRequestAi={aiMode !== "legacy" || canRequestAi}
+                onRequestAi={() => { if (aiMode !== "legacy") { router.push(aiHref); return; } setAiError(""); setAiOpen(true); }}
                 onRescan={rescan}
                 rescanPending={pending}
                 publicSample={publicSample}
