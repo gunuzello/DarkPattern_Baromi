@@ -13,6 +13,9 @@ public interface ScanRepository extends JpaRepository<ScanEntity,String> {
  java.util.List<ScanEntity> findByShopIdOrderByCreatedAtDesc(String shopId, Pageable pageable);
  java.util.List<ScanEntity> findByShopIdOrderByCreatedAtDesc(String shopId);
  long deleteByShopId(String shopId);
+ @Modifying @Transactional
+ @Query("update ScanEntity s set s.shopId = :target where s.shopId = :source")
+ int moveShopScans(String source, String target);
  @Modifying
  @Transactional
  @Query("update ScanEntity s set s.reportJson = null, s.reportExpiresAt = null, s.updatedAt = CURRENT_TIMESTAMP where s.reportExpiresAt < CURRENT_TIMESTAMP and s.reportJson is not null")

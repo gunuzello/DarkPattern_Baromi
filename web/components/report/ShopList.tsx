@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { PageHead } from "@/components/shell/PageHead";
 import { Alert } from "@/components/ui/Alert";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -24,6 +24,10 @@ export function ShopList() {
   const [removing, setRemoving] = useState<ShopRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [removeError, setRemoveError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [nicknameDraft, setNicknameDraft] = useState("");
+  const [renameError, setRenameError] = useState("");
+  const [renaming, setRenaming] = useState(false);
   const backToLogin = useBackToLogin();
 
   useEffect(() => {
@@ -56,6 +60,28 @@ export function ShopList() {
     }
   }
 
+  async function rename(event: FormEvent<HTMLFormElement>, shop: ShopRow) {
+    event.preventDefault();
+    const nickname = nicknameDraft.trim();
+    if (!nickname || nickname.length > 80) {
+      setRenameError("쇼핑몰 이름을 1~80자로 입력해 주세요.");
+      return;
+    }
+    setRenaming(true);
+    setRenameError("");
+    try {
+      await api.renameShop(shop.shopId, nickname);
+      setShops((current) => current?.map((item) => item.shopId === shop.shopId ? { ...item, nickname } : item));
+      setEditingId(null);
+      toast.show("쇼핑몰 이름을 저장했어요");
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.sessionLost) backToLogin();
+      else setRenameError(errorMessage(cause, "쇼핑몰 이름을 저장하지 못했어요."));
+    } finally {
+      setRenaming(false);
+    }
+  }
+
   return (
     <>
       <PageHead
@@ -82,15 +108,25 @@ export function ShopList() {
               <Link href={`/shop/${encodeURIComponent(shop.shopId)}`} className="shop-card__main">
                 <span className="shop-card__icon" aria-hidden><Icon name="shop" size={20} /></span>
                 <span className="shop-card__text">
-                  <b>{hostOf(shop.url)}</b>
+                  <b>{shop.nickname?.trim() || hostOf(shop.url)}</b>
                   <span>{shop.url}</span>
                 </span>
                 <Icon name="chevron" size={16} color="var(--ink-3)" />
               </Link>
               <div className="shop-card__foot">
                 <ButtonLink variant="secondary" size="sm" href={`/shop/${encodeURIComponent(shop.shopId)}`}>점검 기록 보기</ButtonLink>
+                <Button variant="tertiary" size="sm" onClick={() => { setEditingId(shop.shopId); setNicknameDraft(shop.nickname ?? ""); setRenameError(""); }}>이름 수정</Button>
                 <Button variant="tertiary" size="sm" onClick={() => { setRemoveError(""); setRemoving(shop); }} aria-label={`${hostOf(shop.url)} 삭제`}>삭제</Button>
               </div>
+              {editingId === shop.shopId ? (
+                <form onSubmit={(event) => void rename(event, shop)} style={{ padding: "12px 16px", borderTop: "1px solid var(--line)", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                  <label htmlFor={`shop-name-${shop.shopId}`} className="sr-only">쇼핑몰 이름</label>
+                  <input id={`shop-name-${shop.shopId}`} className="input" autoFocus maxLength={80} value={nicknameDraft} onChange={(event) => setNicknameDraft(event.target.value)} placeholder="쇼핑몰 이름" style={{ flex: "1 1 220px" }} />
+                  <Button type="submit" size="sm" loading={renaming} loadingText="저장 중">저장</Button>
+                  <Button type="button" variant="tertiary" size="sm" disabled={renaming} onClick={() => { setEditingId(null); setRenameError(""); }}>취소</Button>
+                  {renameError ? <span role="alert" style={{ flexBasis: "100%", color: "var(--risk-ink)", fontSize: 13 }}>{renameError}</span> : null}
+                </form>
+              ) : null}
             </li>
           ))}
         </ul>

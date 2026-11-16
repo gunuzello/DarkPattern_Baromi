@@ -39,6 +39,7 @@ export function ScanForm() {
   const toast = useToast();
   const backToLogin = useBackToLogin();
   const [url, setUrl] = useState("");
+  const [nickname, setNickname] = useState("");
   const [touched, setTouched] = useState(false);
   const [mode, setMode] = useState<Mode>("full");
   const [viewport, setViewport] = useState<Viewport>("DESKTOP");
@@ -72,9 +73,10 @@ export function ScanForm() {
     setError("");
     setUnavailable(false);
     try {
-      const shop = await api.createShop(url.trim(), consent);
+      const shop = await api.createShop(url.trim(), consent, nickname);
       if (!full) return await startScan(shop.shopId, "CONTEST");
       if (hasAccount) return await startScan(shop.shopId, "DYNAMIC");
+      if (shop.verifiedAt) return await startScan(shop.shopId, "DYNAMIC");
       if (!shop.verification) {
         setUnavailable(true);
         setPending(false);
@@ -136,6 +138,12 @@ export function ScanForm() {
             <p id="scan-url-help" className={touched && problem ? "field__help field__help--error" : "field__help"}>
               {touched && problem ? <><Icon name="alert" size={16} /><span>{problem}</span></> : "공개 HTTPS 쇼핑몰 주소나 상품 상세 주소를 넣어주세요."}
             </p>
+          </div>
+
+          <div className="field">
+            <label htmlFor="scan-shop-name" className="field__label" style={{ fontSize: 15, fontWeight: 700 }}>쇼핑몰 이름 <span className="faint" style={{ fontWeight: 500 }}>(선택)</span></label>
+            <input id="scan-shop-name" className="input" type="text" maxLength={80} placeholder="예: 우리 브랜드몰" value={nickname} onChange={(event) => setNickname(event.target.value)} />
+            <p className="field__help">내 쇼핑몰 목록에서 알아보기 쉬운 이름으로 표시돼요.</p>
           </div>
 
           <fieldset style={{ margin: 0, padding: 0, border: 0, display: "flex", flexDirection: "column", gap: 10 }}>

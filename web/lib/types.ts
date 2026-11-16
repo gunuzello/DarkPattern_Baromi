@@ -98,11 +98,11 @@ export type PriceLedger = {
 };
 
 export type Verification = { name: string; token: string; metaTag: string; filePath: string; dnsRecord: string };
-export type CreateShopResponse = { shopId: string; url: string; verification: Verification | null };
+export type CreateShopResponse = { shopId: string; url: string; nickname?: string | null; existing?: boolean; verifiedAt?: string | null; verification: Verification | null };
 export type VerifyResponse = { verified: true; verifiedAt: string; method?: "meta" | "file" | "dns" };
 export type CreateScanResponse = { scanId: string; status?: string; createdAt?: string; deduplicated?: boolean };
 export type CancelResponse = { status: string; cancelRequested?: boolean };
-export type ShopListResponse = { limit: number; shops: { shopId: string; url: string }[] };
+export type ShopListResponse = { limit: number; shops: { shopId: string; url: string; nickname?: string | null }[] };
 
 export type ScanState = {
   scanId: string;
@@ -273,4 +273,4 @@ export type ReviewClassification = {
   candidateId: string; label: "FEE" | "PAID_OPTION" | "FLOW" | "UNRESOLVED";
   confidence: number; method: "candidate_kind_mapping" | "unresolved";
 };
-export type Shop = { id: string; url: string; consentAt?: string | null; verifiedAt?: string | null };
+export type Shop = { id: string; url: string; nickname?: string | null; consentAt?: string | null; verifiedAt?: string | null };

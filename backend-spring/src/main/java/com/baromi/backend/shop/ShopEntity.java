@@ -12,6 +12,7 @@ public class ShopEntity {
     @Id
     private String id;
     @Column(nullable = false) private String url;
+    @Column(length = 160) private String nickname;
     @Column(nullable = false) private String ownerHash;
     @Column(nullable = false) private Instant consentAt;
     private String verificationHash;
@@ -25,6 +26,8 @@ public class ShopEntity {
 
     public String getId() { return id; }
     public String getUrl() { return url; }
+    public String getNickname() { return nickname; }
+    public void setNickname(String nickname) { this.nickname = nickname; }
     public String getOwnerHash() { return ownerHash; }
     public Instant getConsentAt() { return consentAt; }
     public String getVerificationHash() { return verificationHash; }

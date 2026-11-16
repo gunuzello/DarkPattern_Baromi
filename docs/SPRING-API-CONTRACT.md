@@ -16,18 +16,18 @@
 `GET /api/v1/shops?limit=50` — 소유자 범위의 최신 상점 목록. `limit`은 1~100으로 제한된다.
 
 ```json
-{ "limit": 50, "shops": [{ "shopId": "shop-id", "url": "https://shop.example", "consentAt": "2026-11-16T10:00:00Z", "verifiedAt": null }] }
+{ "limit": 50, "shops": [{ "shopId": "shop-id", "url": "https://shop.example", "nickname": "우리 쇼핑몰", "consentAt": "2026-11-16T10:00:00Z", "verifiedAt": null }] }
 ```
 
 `POST /api/v1/shops`
 
 ```json
-{ "id": "optional-client-id", "url": "https://shop.example", "consent": true }
+{ "id": "optional-client-id", "url": "https://shop.example", "nickname": "우리 쇼핑몰", "consent": true }
 ```
 
-응답: `201 { "shopId": "...", "url": "..." }`
+응답: `201 { "shopId": "...", "url": "..." }`. 동일 계정의 정규화된 URL이 있으면 기존 ID를 `200` 응답으로 돌려준다.
 
-같은 소유자가 같은 URL을 다시 등록하면 기존 `shopId`를 반환한다. BFF 미러링은 전달된 `id`를 사용해 중복 생성을 막는다.
+`PATCH /api/v1/shops/{shopId}`에 `{ "nickname": "우리 쇼핑몰" }`을 보내 표시 이름을 변경한다. 이름은 공백 제외 1~80자다. 목록 조회 시 과거 중복 쇼핑몰이 발견되면 가장 먼저 등록한 ID를 유지하고 모든 진단 이력을 그 ID에 연결한 뒤 중복 항목을 제거한다.
 
 `DELETE /api/v1/shops/{shopId}` — 해당 소유자의 쇼핑몰과 진단 이력을 함께 삭제한다. `queued` 또는 `running` 진단이 있으면 `409`이며 삭제하지 않는다. 성공 응답은 삭제된 진단 ID를 포함한 `{ "deleted": true, "shopId": "...", "deletedScanIds": ["..."] }`다.
 

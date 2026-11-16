@@ -40,7 +40,7 @@ async function springGet(path: string, owner: string) {
   }
 }
 
-export async function mirrorSpringShop(shopId: string, url: string, owner: string) {
+export async function mirrorSpringShop(shopId: string, url: string, owner: string, nickname?: string | null) {
   const base = endpoint();
   if (!base || !owner) return !springAuthoritative();
   const controller = new AbortController();
@@ -48,7 +48,7 @@ export async function mirrorSpringShop(shopId: string, url: string, owner: strin
   try {
     const response = await fetch(`${base}/api/v1/shops`, {
       method: "POST", headers: { "content-type": "application/json", "x-baromi-owner": owner },
-      body: JSON.stringify({ id: shopId, url, consent: true }), signal: controller.signal,
+      body: JSON.stringify({ id: shopId, url, consent: true, ...(nickname ? { nickname } : {}) }), signal: controller.signal,
     });
     if (!response.ok && response.status !== 409) { console.warn(`Spring shop mirror failed: ${response.status}`); return false; }
     return true;

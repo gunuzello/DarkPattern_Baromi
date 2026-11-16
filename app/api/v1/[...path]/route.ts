@@ -30,6 +30,10 @@ type Context = { params: Promise<{ path: string[] }> };
 type Report = Omit<Awaited<ReturnType<typeof scanDemo>>, "scenario"> & { scenario: string; ruleCoverage?: RuleCoverage };
 const cookie = "darkpattern-session";
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+const normalizeShopUrl = (value: string) => {
+  const url = new URL(value);
+  return `${url.protocol}//${url.host.toLowerCase()}${url.pathname.replace(/\/+$/, "")}${url.search}`;
+};
 const error = (message: string, status: number) => Response.json({ error: message }, { status });
 const normalizeScanStatus = (value: unknown) => {
   if (typeof value !== "string") return value;
@@ -205,13 +209,28 @@ export async function POST(request: NextRequest, context: Context) {
     if (body?.consent !== true || !target) {
       return error("공개 HTTPS 쇼핑몰 URL과 검사 동의가 필요합니다.", 400);
     }
+    if (body?.nickname !== undefined && (typeof body.nickname !== "string" || body.nickname.trim().length > 80)) {
+      return error("쇼핑몰 이름은 80자 이내로 입력해 주세요.", 400);
+    }
     const token = session ?? randomUUID();
+    if (springAuthoritative()) {
+      let existing: Record<string, unknown> | null;
+      try { existing = await listSpringShops(token, 100); }
+      catch (cause) { return error(cause instanceof Error ? cause.message : "쇼핑몰 목록을 확인하지 못했습니다.", 503); }
+      const match = (existing?.shops as { shopId: string; url: string; nickname?: string | null; verifiedAt?: string | null }[] | undefined)
+        ?.find((item) => normalizeShopUrl(item.url) === normalizeShopUrl(target.url));
+      if (match) return Response.json({ shopId: match.shopId, url: match.url, nickname: match.nickname ?? null, verifiedAt: match.verifiedAt ?? null, existing: true, verification: null });
+    } else {
+      const existing = await db().shop.findMany({ where: { ownerHash: hash(token) }, select: { id: true, url: true, nickname: true, verifiedAt: true } });
+      const match = existing.find((item) => normalizeShopUrl(item.url) === normalizeShopUrl(target.url));
+      if (match) return Response.json({ shopId: match.id, url: match.url, nickname: match.nickname, verifiedAt: match.verifiedAt, existing: true, verification: null });
+    }
     const verification = createSiteVerification();
     const shop = await db().shop.create({
-      data: { id: randomUUID(), url: target.url, ownerHash: hash(token), verificationHash: verification.hash },
+      data: { id: randomUUID(), url: target.url, ownerHash: hash(token), verificationHash: verification.hash, nickname: typeof body?.nickname === "string" && body.nickname.trim() ? body.nickname.trim().slice(0, 80) : null },
     });
     const response = NextResponse.json({
-      shopId: shop.id, url: shop.url,
+      shopId: shop.id, url: shop.url, nickname: shop.nickname, verifiedAt: shop.verifiedAt,
       verification: target.scenario === "public" ? {
         name: verificationName, token: verification.token,
         metaTag: `<meta name="${verificationName}" content="${verification.token}">`,
@@ -219,7 +238,7 @@ export async function POST(request: NextRequest, context: Context) {
         dnsRecord: `${verificationDnsPrefix}.${new URL(shop.url).hostname} TXT ${verification.token}`,
       } : null,
     }, { status: 201 });
-    if (!await mirrorSpringShop(shop.id, shop.url, token) && springAuthoritative()) {
+    if (!await mirrorSpringShop(shop.id, shop.url, token, shop.nickname) && springAuthoritative()) {
       await db().shop.delete({ where: { id: shop.id } }).catch(() => undefined);
       return error("최종 상태 저장소에 연결할 수 없어 상점을 등록하지 못했습니다.", 503);
     }
@@ -465,15 +484,45 @@ export async function GET(request: NextRequest, context: Context) {
         if (spring) return Response.json(spring, { headers: { "Cache-Control": "private, no-store" } });
       } catch (cause) { return error(cause instanceof Error ? cause.message : "Spring 상태 저장소에 연결할 수 없습니다.", 503); }
     }
+    const allShops = await db().shop.findMany({
+      where: { ownerHash }, orderBy: { consentAt: "asc" },
+      select: { id: true, url: true, nickname: true },
+    });
+    const keepers = new Map<string, (typeof allShops)[number]>();
+    for (const shop of allShops) {
+      const key = normalizeShopUrl(shop.url);
+      const keeper = keepers.get(key);
+      if (!keeper) { keepers.set(key, shop); continue; }
+      await db().$transaction(async (tx) => {
+        await tx.scan.updateMany({ where: { shopId: shop.id }, data: { shopId: keeper.id } });
+        if (!keeper.nickname && shop.nickname) await tx.shop.update({ where: { id: keeper.id }, data: { nickname: shop.nickname } });
+        await tx.shop.delete({ where: { id: shop.id } });
+      });
+      if (!keeper.nickname && shop.nickname) keeper.nickname = shop.nickname;
+    }
     const shops = await db().shop.findMany({
       where: { ownerHash }, orderBy: { consentAt: "desc" }, take: limit,
-      select: { id: true, url: true, consentAt: true, verifiedAt: true },
+      select: { id: true, url: true, nickname: true, consentAt: true, verifiedAt: true },
     });
     return Response.json({ limit, shops: shops.map((shop) => ({
-      shopId: shop.id, url: shop.url, consentAt: shop.consentAt, verifiedAt: shop.verifiedAt,
+      shopId: shop.id, url: shop.url, nickname: shop.nickname, consentAt: shop.consentAt, verifiedAt: shop.verifiedAt,
     })) });
   }
   const [resource, id, action, ...extra] = route;
+  if (resource === "shops" && id && route.length === 2 && request.method === "PATCH") {
+    const body = await request.json().catch(() => null);
+    const nickname = typeof body?.nickname === "string" ? body.nickname.trim() : "";
+    if (!nickname || nickname.length > 80) return error("쇼핑몰 이름은 1~80자로 입력해 주세요.", 400);
+    if (springAuthoritative()) {
+      const base = process.env.BAROMI_SPRING_API_URL?.replace(/\/$/, "");
+      if (!base) return error("최종 저장소에 연결할 수 없습니다.", 503);
+      const result = await fetch(`${base}/api/v1/shops/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "content-type": "application/json", "x-baromi-owner": session }, body: JSON.stringify({ nickname }) });
+      return new Response(result.body, { status: result.status, headers: { "content-type": "application/json" } });
+    }
+    const shop = await db().shop.findFirst({ where: { id, ownerHash } });
+    if (!shop) return notFound();
+    return Response.json(await db().shop.update({ where: { id }, data: { nickname } }));
+  }
   if (!id || extra.length) return notFound();
 
   if (resource === "shops" && action === "scans" && route.length === 3) {
@@ -517,7 +566,7 @@ export async function GET(request: NextRequest, context: Context) {
       } catch (cause) { return error(cause instanceof Error ? cause.message : "Spring 상태 저장소에 연결할 수 없습니다.", 503); }
     }
     const shop = await db().shop.findFirst({
-      where: { id, ownerHash }, select: { id: true, url: true, consentAt: true, verifiedAt: true },
+      where: { id, ownerHash }, select: { id: true, url: true, nickname: true, consentAt: true, verifiedAt: true },
     });
     return shop ? Response.json(shop) : notFound();
   }

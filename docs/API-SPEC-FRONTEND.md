@@ -37,14 +37,16 @@
 
 로그인한 사용자 소유의 쇼핑몰 목록을 반환한다. `limit`은 1~100으로 제한된다. 이메일이나 비밀번호는 쇼핑몰 데이터와 함께 저장하지 않으며, 소유권은 인증된 Supabase 사용자 ID에 연결된다.
 
+`nickname`은 사용자가 지정한 표시 이름이며 미지정이면 `null`이다. 동일 계정의 정규화된 URL은 한 항목으로 반환한다. 과거 중복 항목은 가장 먼저 등록한 쇼핑몰 ID에 진단 이력을 합쳐 반환한다.
+
 ```json
-{ "limit": 50, "shops": [{ "shopId": "uuid", "url": "https://shop.example.com", "consentAt": "ISO-8601", "verifiedAt": "ISO-8601|null" }] }
+{ "limit": 50, "shops": [{ "shopId": "uuid", "url": "https://shop.example.com", "nickname": "우리 쇼핑몰", "consentAt": "ISO-8601", "verifiedAt": "ISO-8601|null" }] }
 ```
 
 ### `POST /api/v1/shops`
 
 ```json
-{ "url": "https://shop.example.com", "consent": true }
+{ "url": "https://shop.example.com", "nickname": "우리 쇼핑몰", "consent": true }
 ```
 
 응답 `201`:
@@ -65,10 +67,19 @@
 
 데모 주소는 `verification: null`일 수 있다.
 
+이미 등록된 정규화 URL이면 새 쇼핑몰을 만들지 않고 기존 `shopId`와 `verification: null`을 반환한다. 등록 시 `nickname`은 선택값이며 80자 이내다.
+
+### `PATCH /api/v1/shops/:shopId`
+
+쇼핑몰 표시 이름을 등록하거나 변경한다. 이름은 공백 제외 1~80자여야 한다.
+
+요청: `{ "nickname": "우리 쇼핑몰" }`
+응답: `{ "shopId": "uuid", "url": "https://shop.example.com", "nickname": "우리 쇼핑몰" }`
+
 ### `GET /api/v1/shops/:shopId`
 
 ```json
-{ "id": "uuid", "url": "https://...", "consentAt": "ISO-8601", "verifiedAt": "ISO-8601|null" }
+{ "id": "uuid", "url": "https://...", "nickname": "우리 쇼핑몰", "consentAt": "ISO-8601", "verifiedAt": "ISO-8601|null" }
 ```
 
 ### `POST /api/v1/shops/:shopId/verify`

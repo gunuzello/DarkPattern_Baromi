@@ -10,6 +10,7 @@ datasource db {
 model Shop {
   id               String    @id
   url              String
+  nickname         String?
   ownerHash        String
   consentAt        DateTime  @default(now())
   verificationHash String?
