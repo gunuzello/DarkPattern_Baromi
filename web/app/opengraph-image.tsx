@@ -2,12 +2,12 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
-export const alt = "바로미 · 쇼핑몰 운영자를 위한 다크패턴 진단";
+export const alt = "바로미 · 쇼핑몰 운영자를 위한 다크패턴 점검";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const TITLE = "쇼핑몰을 더 바르게.";
-const SUB = "쇼핑몰 운영자를 위한 다크패턴 진단";
+const SUB = "쇼핑몰 운영자를 위한 다크패턴 점검";
 const WORD = "바로미";
 const CHIPS = ["상품 상세", "장바구니", "주문서", "16가지 점검"];
 

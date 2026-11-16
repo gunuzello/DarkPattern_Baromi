@@ -1,7 +1,7 @@
-import { checkResults, type CheckResult } from "@/lib/checks";
+import { checkResults, ruleKind, type CheckResult } from "@/lib/checks";
 import { guide } from "@/lib/guide";
 import { rules } from "@/lib/labels";
-import type { AiReview, Report, ReviewCandidate } from "@/lib/types";
+import type { AiReview, Report, ReviewCandidate, RuleCoverage } from "@/lib/types";
 
 export type AiDecision = NonNullable<NonNullable<AiReview["result"]>["decisions"]>[number] & { candidate?: ReviewCandidate };
 
@@ -53,4 +53,19 @@ export function methodText(report: Report): string {
   if (report.executionMode !== "DYNAMIC") return "공개된 화면에 보이는 내용을 읽어서 확인했어요. 장바구니와 주문서는 열지 않았어요.";
   const path = report.purchasePath === "DIRECT" ? "상품 → 바로구매 → 주문서" : "상품 → 장바구니 → 주문서";
   return `실제 구매 과정처럼 ${path} 순서로 확인했어요. 결제 버튼은 누르지 않았어요.`;
+}
+
+/** Per-check results from the server's ruleCoverage alone (scan progress), in rule order. */
+export function coverageResults(coverage: RuleCoverage): CheckResult[] {
+  return rules.map((rule) => {
+    const item = coverage[rule.type];
+    return { type: rule.type, name: rule.name, kind: item ? ruleKind[item.status] ?? "none" : "none", note: item?.reason ?? "", evidenceIds: item?.evidenceIds ?? [], findings: [] };
+  });
+}
+
+/** Report headline, shared by the report, the scan progress screen and the landing preview. */
+export function resultHeadline(risk: number, review: number): string {
+  if (!risk && !review) return "16가지 중 고쳐야 할 곳이나 확인할 곳이 보이지 않았어요";
+  const parts = [risk ? `고쳐야 할 곳 ${risk}곳` : "", review ? `확인할 곳 ${review}곳` : ""].filter(Boolean);
+  return `16가지 중 ${parts.join(", ")}이 있어요`;
 }

@@ -4,85 +4,122 @@ import { useEffect, useState } from "react";
 import { PageHead } from "@/components/shell/PageHead";
 import { Alert } from "@/components/ui/Alert";
 import { ButtonLink } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Status";
+import { Mark, VerdictBadge } from "@/components/ui/Status";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import { ruleByType, stageLabels } from "@/lib/labels";
+import { guide } from "@/lib/guide";
+import { ruleByType, rules, stageLabels } from "@/lib/labels";
+import { useBackToLogin } from "@/lib/session";
 import type { FindingDetail } from "@/lib/types";
 import { EvidenceShot } from "./EvidenceShot";
+import { Block, Checklist } from "./TypeDetail";
 
+/**
+ * One finding with every captured screen, larger than the report's side panel.
+ * Same wording and verdict badges as the report (고쳐야 해요 / 확인해 보세요).
+ */
 export function FindingDetailView({ scanId, findingId }: { scanId: string; findingId: string }) {
   const [detail, setDetail] = useState<FindingDetail>();
   const [error, setError] = useState("");
+  const backToLogin = useBackToLogin();
 
   useEffect(() => {
     let alive = true;
     api.getFinding(findingId, scanId)
       .then((result) => { if (alive) setDetail(result); })
-      .catch((cause) => { if (alive) setError(cause instanceof ApiError && cause.status === 404 ? "이 발견 항목을 찾지 못했어요. 세션이 끝났다면 새 진단에서 다시 시작해 주세요." : errorMessage(cause, "발견 항목을 불러오지 못했어요.")); });
+      .catch((cause) => {
+        if (!alive) return;
+        if (cause instanceof ApiError && cause.sessionLost) { backToLogin(); return; }
+        setError(cause instanceof ApiError && cause.status === 404
+          ? "이 항목을 찾지 못했어요. 결과가 삭제됐거나 다른 계정의 결과일 수 있어요."
+          : errorMessage(cause, "항목을 불러오지 못했어요."));
+      });
     return () => { alive = false; };
-  }, [findingId, scanId]);
+  }, [findingId, scanId, backToLogin]);
 
   const back = `/report/${encodeURIComponent(scanId)}`;
-  if (!detail) return error ? <Alert kind="error" title={error} actions={<><ButtonLink variant="secondary" size="sm" href={back}>보고서로 돌아가기</ButtonLink><ButtonLink variant="tertiary" size="sm" href="/scan/new">새 진단</ButtonLink></>} /> : <p role="status" className="muted">증거를 불러오고 있어요.</p>;
+  if (!detail) {
+    return error
+      ? <Alert kind="error" title={error} actions={<><ButtonLink variant="secondary" size="sm" href={back}>점검 결과로 돌아가기</ButtonLink><ButtonLink variant="tertiary" size="sm" href="/shops">내 쇼핑몰</ButtonLink></>} />
+      : <p role="status" className="muted">확인 화면을 불러오고 있어요.</p>;
+  }
 
   const rule = ruleByType[detail.type];
-  const isReview = detail.status === "REVIEW_NEEDED";
+  const g = guide[detail.type];
+  const kind = detail.status === "REVIEW_NEEDED" ? "review" : "risk";
+  const no = String(rules.findIndex((item) => item.type === detail.type) + 1).padStart(2, "0");
+
   return (
     <>
       <PageHead
-        title={rule.title}
-        crumbs={[{ label: "진단 보고서", href: back }, { label: "발견 항목" }]}
-        actions={<ButtonLink variant="secondary" href={back}>보고서로 돌아가기</ButtonLink>}
+        title="확인 화면"
+        crumbs={[{ label: "점검 결과", href: back }, { label: g.plain }]}
+        actions={<ButtonLink variant="secondary" href={back}>점검 결과로 돌아가기</ButtonLink>}
       />
 
-      <section className="panel panel--feature" style={{ padding: "28px 32px", display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-          <Badge kind={isReview ? "review" : "risk"} large>{isReview ? "검토 필요" : "위험 신호"}</Badge>
-          <span className="faint" style={{ fontSize: 13 }}>{isReview ? "맥락을 추가로 확인해야 해요" : "바로미의 판정 기준에 해당하는 신호예요"}</span>
+      <article className={`rv-detail rv-detail--${kind} fd-card`} aria-labelledby="fd-title">
+        <header className="rv-detail__head">
+          <div className="rv-detail__meta">
+            <VerdictBadge kind={kind} />
+            <span className="tnum faint">{no}</span>
+            <span className="faint">· {stageLabels[detail.stage]}에서 찾았어요</span>
+          </div>
+          <h2 id="fd-title" className="rv-detail__title">{g.plain}</h2>
+          <p className="rv-detail__lede">
+            {kind === "risk" ? g.criteria : "관련된 내용은 찾았지만 기준만으로는 문제인지 확실히 말하기 어려워요. ‘고쳐야 해요’로 판단한 것은 아니에요."}
+          </p>
+        </header>
+        <Block title={kind === "risk" ? "무엇이 문제였나요?" : "찾은 내용"}>
+          <p className="fd-reason">{detail.reason}</p>
+        </Block>
+        {kind === "risk" ? (
+          <Block title="이렇게 고쳐 보세요">
+            <Checklist id={`fd-${detail.id}`} items={[...g.fixes, "고친 뒤 같은 조건으로 다시 점검해서 결과를 비교하세요"]} />
+          </Block>
+        ) : (
+          <Block title="아직 확실하지 않은 점">
+            <p>{g.limit}</p>
+          </Block>
+        )}
+      </article>
+
+      <section aria-labelledby="fd-shots" className="fd-shots">
+        <h2 id="fd-shots" className="t-title" style={{ fontSize: 20 }}>단계별 확인 화면</h2>
+        <div className="fd-shots__grid">
+          {detail.evidence.map((snapshot) => {
+            const hit = snapshot.stage === detail.stage;
+            return (
+              <figure key={snapshot.stage} className={hit ? "fd-shot is-hit" : "fd-shot"}>
+                <figcaption>
+                  <b>{stageLabels[snapshot.stage]}</b>
+                  {hit ? <span className={`verdict verdict--${kind}`}><Mark kind={kind} />여기서 찾았어요</span> : null}
+                </figcaption>
+                <EvidenceShot
+                  scanId={detail.scanId}
+                  stage={snapshot.stage}
+                  area={snapshot.screenshotArea}
+                  element={hit ? detail.elementBounds : undefined}
+                  priceLines={snapshot.priceLines}
+                />
+                <span className="fd-shot__url mono">{snapshot.url}</span>
+              </figure>
+            );
+          })}
         </div>
-        <p style={{ fontSize: 17, lineHeight: 1.65, maxWidth: "40em" }}>{detail.reason}</p>
-        <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, paddingTop: 16, borderTop: "1px solid var(--line)", fontSize: 14 }}>
-          <div><dt className="t-caption">점검 항목</dt><dd style={{ margin: 0, fontWeight: 600 }}>{rule.name}</dd></div>
-          <div><dt className="t-caption">단계</dt><dd style={{ margin: 0, fontWeight: 600 }}>{stageLabels[detail.stage]}</dd></div>
-          {detail.ruleVersion ? <div><dt className="t-caption">규칙 버전</dt><dd className="mono" style={{ margin: 0, fontWeight: 600 }}>{detail.ruleVersion}</dd></div> : null}
-          {detail.evidenceIds?.length ? <div><dt className="t-caption">근거 ID</dt><dd className="mono" style={{ margin: 0, fontWeight: 600 }}>{detail.evidenceIds.join(", ")}</dd></div> : null}
-        </dl>
       </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
-        <section className="quiet" style={{ padding: "24px 28px", background: "var(--surface-sub)", borderRadius: 12, gap: 8 }}>
-          <h2 className="t-panel">개선 방법</h2>
-          <p style={{ fontSize: 17, lineHeight: 1.6, fontWeight: 600 }}>{rule.recommendation}</p>
-        </section>
-        <section className="panel panel--feature" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <h2 className="t-panel">판단 기준</h2>
-          <a href={rule.source} target="_blank" rel="noreferrer" style={{ fontSize: 15, fontWeight: 600 }}>{rule.reference}</a>
-          <p className="faint" style={{ fontSize: 13 }}>법률 위반 판단이 아니라 이 기준에 비춘 위험 신호예요.</p>
-        </section>
-      </div>
-
-      <section aria-labelledby="evidence-head" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <h2 id="evidence-head" className="t-title" style={{ fontSize: 20 }}>화면 증거</h2>
-        <div className="panel panel--feature" style={{ padding: 24, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
-          {detail.evidence.map((snapshot) => (
-            <figure key={snapshot.stage} style={{ margin: 0, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-              <figcaption style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 700 }}>{stageLabels[snapshot.stage]}</span>
-                {snapshot.stage === detail.stage ? <Badge kind="risk">이 단계에서 관찰</Badge> : null}
-              </figcaption>
-              <EvidenceShot
-                scanId={detail.scanId}
-                stage={snapshot.stage}
-                area={snapshot.screenshotArea}
-                element={snapshot.stage === detail.stage ? detail.elementBounds : undefined}
-              />
-              <ul className="tnum" style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 2, fontSize: 13, color: "var(--ink-2)" }}>
-                {snapshot.priceLines.map((line, index) => <li key={index}>{line}</li>)}
-              </ul>
-              <span className="mono faint" style={{ fontSize: 13, overflowWrap: "anywhere" }}>{snapshot.url}</span>
-            </figure>
-          ))}
+      <section className="fd-basis">
+        <div>
+          <span className="fd-basis__label">판단 기준</span>
+          <a href={rule.source} target="_blank" rel="noreferrer">{rule.reference}</a>
+          <p className="faint">법률 위반 판단이 아니라 이 기준에 비춘 위험 신호예요.</p>
         </div>
+        {detail.evidenceIds?.length ? (
+          <div>
+            <span className="fd-basis__label">확인 번호</span>
+            <span className="mono">{detail.evidenceIds.join(", ")}</span>
+            {detail.ruleVersion ? <p className="faint">판정 규칙 버전 {detail.ruleVersion}</p> : null}
+          </div>
+        ) : null}
       </section>
     </>
   );

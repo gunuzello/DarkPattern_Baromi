@@ -18,19 +18,20 @@ export const SAMPLE_ID = "sample";
 export const usesSample = (scanId?: string) => isDemo || scanId === SAMPLE_ID || Boolean(scanId?.startsWith("sample-"));
 
 const fallback: Record<number, string> = {
-  404: "세션이 만료됐거나 항목을 찾을 수 없어요.",
+  401: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+  404: "찾을 수 없어요. 삭제됐거나 다른 계정의 항목일 수 있어요.",
   409: "지금 상태에서는 처리할 수 없어요.",
   429: "요청이 많아 잠시 막혔어요. 잠시 후 다시 시도해 주세요.",
-  503: "저장소나 진단 작업기에 문제가 있어요. 잠시 후 다시 시도해 주세요.",
+  503: "저장소나 점검 작업기에 문제가 있어요. 잠시 후 다시 시도해 주세요.",
 };
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
     super(message);
   }
-  /** 404 can mean an expired session (spec: frontend note 1). */
+  /** Supabase login missing or expired. A 404 is a real "not found" and is shown in place. */
   get sessionLost() {
-    return this.status === 404 || this.status === 401;
+    return this.status === 401;
   }
 }
 
@@ -150,4 +151,6 @@ export const api = {
 
   downloadReport: (scanId: string) => requestDownload(`scans/${seg(scanId)}/report?download=1`),
   evidenceUrl: (scanId: string, stage: Stage) => `/api/v1/evidences/${seg(scanId)}-${stage}`,
+  /** Screenshot as a blob, fetched with the login token (an <img> request cannot send it). */
+  evidenceBlob: (scanId: string, stage: Stage) => requestDownload(`evidences/${seg(scanId)}-${stage}`),
 };

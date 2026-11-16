@@ -20,7 +20,7 @@ export const surfaceStatusLabels: Record<SurfaceStatus, string> = {
   BLOCKED: "접근 실패",
   NOT_FOUND: "경로 미발견",
   PENDING: "탐색 대기",
-  SKIPPED: "전체 구매 흐름 진단에서 확인",
+  SKIPPED: "전체 구매 흐름 점검에서 확인",
 };
 
 export function stageCoverageLabel(value: StageCoverage, staticMode: boolean): string {
@@ -35,11 +35,11 @@ export const scanDurationHint = "보통 5분 안팎이에요. 사이트 응답�
 
 export const scanStatusLabels: Record<ScanStatus, string> = {
   QUEUED: "대기 중",
-  RUNNING: "진단 중",
-  COMPLETED: "진단 완료",
-  PARTIAL: "검증 범위 제한",
-  FAILED: "진단 실패",
-  CANCELLED: "진단 중단",
+  RUNNING: "점검 중",
+  COMPLETED: "점검 완료",
+  PARTIAL: "일부만 점검",
+  FAILED: "점검 실패",
+  CANCELLED: "점검 중단",
 };
 
 /**

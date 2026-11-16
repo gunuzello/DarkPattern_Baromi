@@ -39,8 +39,8 @@ export function SiteHeader() {
         </nav>
         <div className="lp-header__cta">
           <span className="site-hide-sm"><AccountControls /></span>
-          <ButtonLink href="/report/sample" variant="secondary" className="site-hide-sm">예시 보고서</ButtonLink>
-          <ButtonLink href="/scan/new" variant="brand">무료로 진단하기</ButtonLink>
+          <ButtonLink href="/report/sample" variant="secondary" className="site-hide-sm">예시 결과</ButtonLink>
+          <ButtonLink href="/scan/new" variant="brand">무료로 점검하기</ButtonLink>
           <button
             type="button"
             className="btn btn--tertiary btn--md site-menu-btn"
@@ -55,7 +55,7 @@ export function SiteHeader() {
       </div>
       {open ? (
         <nav id="site-menu" aria-label="모바일 메뉴" className="site-menu">
-          {[...siteNav, { href: "/report/sample", label: "예시 보고서" }, { href: "/shops", label: "내 쇼핑몰" }].map((item) => (
+          {[...siteNav, { href: "/report/sample", label: "예시 결과" }, { href: "/shops", label: "내 쇼핑몰" }].map((item) => (
             <Link key={item.href} href={item.href} onClick={() => setOpen(false)}>{item.label}</Link>
           ))}
           <AccountControls compact />
@@ -78,7 +78,7 @@ export function SiteFooter() {
       <nav aria-label="하단 메뉴" className="site-footer-nav">
         {siteNav.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
         <Link href="/shops">내 쇼핑몰</Link>
-        <Link href="/scan/new">진단 시작</Link>
+        <Link href="/scan/new">점검 시작</Link>
         <a href="mailto:hello@baromi.app">문의하기</a>
       </nav>
     </footer>
@@ -104,9 +104,9 @@ export function SitePage({ eyebrow, title, lede, children }: { eyebrow?: string;
           <div className="lp-wrap lp-closing__inner" style={{ paddingBlock: 88 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", lineHeight: 1.1, letterSpacing: "-0.035em", fontWeight: 800 }}>배포하기 전에<br />한 번 먼저 점검하세요.</h2>
-              <p>주소만 넣으면 공개 화면 진단부터 바로 시작할 수 있어요.</p>
+              <p>주소만 넣으면 공개 화면 점검부터 바로 시작할 수 있어요.</p>
             </div>
-            <ButtonLink href="/scan/new" variant="brand" size="lg">무료로 진단하기</ButtonLink>
+            <ButtonLink href="/scan/new" variant="brand" size="lg">무료로 점검하기</ButtonLink>
           </div>
         </section>
       </main>
