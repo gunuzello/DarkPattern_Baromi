@@ -31,7 +31,7 @@ export function stageCoverageLabel(value: StageCoverage, staticMode: boolean): s
 }
 
 /** One expectation for scan length everywhere it is mentioned (form, progress). */
-export const scanDurationHint = "보통 1분 안팎이에요. 사이트 응답에 따라 달라져요.";
+export const scanDurationHint = "보통 5분 안팎이에요. 사이트 응답에 따라 달라져요.";
 
 export const scanStatusLabels: Record<ScanStatus, string> = {
   QUEUED: "대기 중",
