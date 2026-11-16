@@ -6,6 +6,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import type { AiReview } from "@/lib/types";
+import type { AiDiagnosis } from "@/lib/aiDiagnosis";
 import type { ReportItem } from "./model";
 
 /**
@@ -45,7 +46,7 @@ export function AiRequestDialog({ open, onClose, targets, eligible, pending, err
     >
       <div className="rv-dialog__inner">
         <span className="rv-dialog__grip" aria-hidden />
-        <h2 id="ai-dialog-title" className="rv-dialog__title">{eligible ? "AI 꼼꼼 점검을 요청할까요?" : "AI 꼼꼼 점검은 유료 기능이에요"}</h2>
+        <h2 id="ai-dialog-title" className="rv-dialog__title">{eligible ? "AI 정밀 점검을 요청할까요?" : "AI 정밀 점검은 유료 기능이에요"}</h2>
         <p className="muted">
           {eligible
             ? `무료 점검에서 ‘확인해 보세요’로 남은 ${targets.length}곳을 모두 AI가 분석해요. 무료 점검 결과와 확인 자료는 그대로 두고, AI 의견을 각 항목에 따로 붙여요.`
@@ -100,7 +101,7 @@ export function AiStatusBanner({ review, targets, eligible, pending, onRetry, on
     return (
       <section role="status" className="rv-banner rv-banner--busy">
         <div className="rv-banner__text">
-          <b>AI 꼼꼼 점검 {review.status === "QUEUED" ? "준비 중" : "중"} · {total}곳 분석</b>
+          <b>AI 정밀 점검 {review.status === "QUEUED" ? "준비 중" : "중"} · {total}곳 분석</b>
           <span>보통 몇 분 걸려요. 기본 점검 결과는 지금도 볼 수 있어요. 창을 닫아도 계속 진행돼요.</span>
         </div>
         <span className="rv-banner__bar" aria-hidden><span /></span>
@@ -112,7 +113,7 @@ export function AiStatusBanner({ review, targets, eligible, pending, onRetry, on
       <section role="alert" className="rv-banner rv-banner--fail">
         <Icon name="alert" color="var(--risk-ink)" />
         <div className="rv-banner__text">
-          <b>AI 꼼꼼 점검에 실패했어요</b>
+          <b>AI 정밀 점검에 실패했어요</b>
           <span>{review.error ?? "분석 결과가 돌아오지 않았어요."} 무료 점검 결과와 확인 자료는 그대로예요.</span>
         </div>
         {eligible ? <Button variant="secondary" size="sm" onClick={onRetry} loading={pending} loadingText="요청 중">다시 요청</Button> : null}
@@ -124,13 +125,53 @@ export function AiStatusBanner({ review, targets, eligible, pending, onRetry, on
     <section role="status" className="rv-banner rv-banner--done">
       <Icon name="check" color="var(--clear-ink)" />
       <div className="rv-banner__text">
-        <b>AI 꼼꼼 점검을 마쳤어요</b>
+        <b>AI 정밀 점검을 마쳤어요</b>
         <span>
           {total}곳 중 {answered}곳에 AI 의견이 붙었어요.
           {answered < total ? ` ${total - answered}곳은 근거가 부족해 ‘확인해 보세요’로 남았어요.` : " 결과 표시는 그대로 ‘확인해 보세요’예요."}
         </span>
       </div>
       {answered ? <Button variant="secondary" size="sm" onClick={onShow}>AI 의견 보기</Button> : null}
+    </section>
+  );
+}
+
+/** Base-report banner for the AI 정밀 점검 (selected checks, 3-level verdict). */
+export function AiDiagnosisBanner({ diagnosis, href }: { diagnosis: AiDiagnosis; href: string }) {
+  const total = diagnosis.requestedTypes.length;
+  if (diagnosis.status === "QUEUED" || diagnosis.status === "RUNNING") {
+    return (
+      <section role="status" className="rv-banner rv-banner--busy">
+        <div className="rv-banner__text">
+          <b>AI 정밀 점검 {diagnosis.status === "QUEUED" ? "준비 중" : "중"} · {diagnosis.doneCount ?? 0}/{total}개 분석</b>
+          <span>기본 점검 결과는 지금도 볼 수 있어요. 창을 닫아도 계속 진행돼요.</span>
+        </div>
+        <Link href={href} className="btn btn--secondary btn--sm">진행 보기</Link>
+        <span className="rv-banner__bar" aria-hidden="true"><span /></span>
+      </section>
+    );
+  }
+  if (diagnosis.status === "FAILED") {
+    return (
+      <section role="alert" className="rv-banner rv-banner--fail">
+        <Icon name="alert" color="var(--risk-ink)" />
+        <div className="rv-banner__text">
+          <b>AI 정밀 점검에 실패했어요</b>
+          <span>{diagnosis.error ?? "분석 결과가 돌아오지 않았어요."} 기본 점검 결과는 그대로예요.</span>
+        </div>
+        <Link href={href} className="btn btn--secondary btn--sm">다시 요청</Link>
+      </section>
+    );
+  }
+  const risk = diagnosis.items.filter((item) => item.verdict === "RISK" && item.status === "ANALYZED").length;
+  return (
+    <section role="status" className="rv-banner rv-banner--ai">
+      <span className="ai-kicker" aria-hidden="true"><Icon name="spark" size={14} />AI</span>
+      <div className="rv-banner__text">
+        <b>AI 정밀 점검 리포트가 준비됐어요</b>
+        <span>{total}개 항목을 분석했어요{risk ? `. 위험 ${risk}개를 먼저 확인해 보세요.` : "."} 기본 점검 결과와 따로 보여드려요.</span>
+      </div>
+      <Link href={href} className="btn btn--brand btn--sm">AI 리포트 보기</Link>
     </section>
   );
 }

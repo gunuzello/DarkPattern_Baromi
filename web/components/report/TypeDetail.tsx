@@ -10,6 +10,9 @@ import { guide } from "@/lib/guide";
 import { ruleSurface, stageLabels } from "@/lib/labels";
 import type { Finding, FindingType, Report } from "@/lib/types";
 import { EvidenceShot } from "./EvidenceShot";
+import Link from "next/link";
+import { AiVerdictBadge } from "@/components/ai/AiReport";
+import type { AiItemResult } from "@/lib/aiDiagnosis";
 import { ReviewCandidates } from "./ReviewCandidates";
 import { aiOpinionText, methodText, type ReportItem } from "./model";
 
@@ -49,7 +52,7 @@ export function Checklist({ id, items }: { id: string; items: string[] }) {
 }
 
 /** Detail panel for one check (wireframe R-02 to R-05). Each result has a fixed section order. */
-export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onRequestAi, onRescan, rescanPending, publicSample }: {
+export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onRequestAi, onRescan, rescanPending, publicSample, aiResult, aiHref }: {
   report: Report;
   item: ReportItem;
   linesFor: (finding: Finding) => string[] | undefined;
@@ -59,6 +62,8 @@ export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onReq
   onRescan: () => void;
   rescanPending: boolean;
   publicSample: boolean;
+  aiResult?: AiItemResult;
+  aiHref?: string;
 }) {
   const g = guide[item.type];
   const finding = item.findings[0];
@@ -109,6 +114,17 @@ export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onReq
         <p className="rv-detail__lede">{item.kind === "risk" ? g.criteria : headline[item.kind]}</p>
       </header>
 
+      {aiResult && aiHref ? (
+        <section className="rv-ai rv-ai--diag" aria-label="AI 정밀 점검 결과">
+          <div className="rv-ai__head">
+            <span className="rv-ai__title">AI 정밀 점검 결과</span>
+            <AiVerdictBadge verdict={aiResult.status === "INSUFFICIENT" ? "INSUFFICIENT" : aiResult.verdict!} />
+          </div>
+          <p style={{ fontSize: 13 }}>{aiResult.conclusion}</p>
+          <Link href={`${aiHref}#ai-item-${item.type}`} className="auth-link">AI 상세 분석 보기</Link>
+        </section>
+      ) : null}
+
       {item.kind === "risk" ? (
         <>
           <Block title="무엇이 문제였나요?">
@@ -154,9 +170,9 @@ export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onReq
           </Block>
 
           {item.ai.length ? (
-            <section className="rv-ai" aria-label="AI 꼼꼼 점검 의견">
+            <section className="rv-ai" aria-label="AI 정밀 점검 의견">
               <div className="rv-ai__head">
-                <span className="rv-ai__title">AI 꼼꼼 점검 의견</span>
+                <span className="rv-ai__title">AI 정밀 점검 의견</span>
                 <span className="rv-chip rv-chip--brand">유료</span>
               </div>
               {item.ai.map((decision) => (
@@ -221,7 +237,7 @@ export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onReq
 
       <footer className="rv-detail__foot">
         {item.kind === "review" && canRequestAi ? (
-          <Button variant="brand" icon="eye" onClick={onRequestAi}>AI 꼼꼼 점검 받기</Button>
+          <Button variant="brand" icon="spark" onClick={onRequestAi}>AI 정밀 점검 받기</Button>
         ) : null}
         {finding ? <ButtonLink variant="secondary" href={`${reportHref}/${finding.id}`}>확인 화면 크게 보기</ButtonLink> : null}
         {item.kind === "risk" && report.comparison && report.comparison.status !== "UNAVAILABLE" ? (

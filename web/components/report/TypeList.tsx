@@ -3,6 +3,8 @@
 import { Icon } from "@/components/ui/Icon";
 import { Mark, plainLabels, resultLabels, VerdictBadge, type ResultKind } from "@/components/ui/Status";
 import { kindOrder } from "./ResultRing";
+import { aiVerdictLabels, type AiItemResult } from "@/lib/aiDiagnosis";
+import type { FindingType } from "@/lib/types";
 import type { ReportItem } from "./model";
 
 export type ListFilter = "all" | ResultKind;
@@ -12,7 +14,7 @@ const tabOrder: ResultKind[] = ["risk", "review", "none", "clear"];
  * The 16 checks grouped by result (wireframe R-01): filter tabs, group header = verdict badge
  * + plain name, colored rule on the left, one row per check. 괜찮아요 starts collapsed.
  */
-export function TypeList({ items, filter, onFilter, selected, onSelect, clearOpen, onClearOpen }: {
+export function TypeList({ items, filter, onFilter, selected, onSelect, clearOpen, onClearOpen, aiResults }: {
   items: ReportItem[];
   filter: ListFilter;
   onFilter: (filter: ListFilter) => void;
@@ -20,6 +22,8 @@ export function TypeList({ items, filter, onFilter, selected, onSelect, clearOpe
   onSelect: (item: ReportItem) => void;
   clearOpen: boolean;
   onClearOpen: (open: boolean) => void;
+  /** Finished AI 정밀 점검 results by check, shown next to the base result. */
+  aiResults?: Partial<Record<FindingType, AiItemResult>>;
 }) {
   const count = (kind: ResultKind) => items.filter((item) => item.kind === kind).length;
   const groups = kindOrder.filter((kind) => (filter === "all" || filter === kind) && count(kind));
@@ -67,7 +71,7 @@ export function TypeList({ items, filter, onFilter, selected, onSelect, clearOpe
                       <span className="rv-row__text">
                         <span className="rv-row__title">
                           {item.plain}
-                          {item.ai.length ? <span className="rv-ai-tag">AI 의견 있음</span> : null}
+                          {aiResults?.[item.type] ? <AiTag result={aiResults[item.type]!} /> : item.ai.length ? <span className="rv-ai-tag">AI 의견 있음</span> : null}
                         </span>
                         <span className="rv-row__summary">{item.summary}</span>
                       </span>
@@ -82,4 +86,10 @@ export function TypeList({ items, filter, onFilter, selected, onSelect, clearOpe
       })}
     </div>
   );
+}
+
+/** Compact AI verdict next to a check in the base list. */
+function AiTag({ result }: { result: AiItemResult }) {
+  const verdict = result.status === "INSUFFICIENT" ? null : result.verdict;
+  return <span className={`rv-ai-tag rv-ai-tag--${verdict?.toLowerCase() ?? "none"}`}>AI {verdict ? aiVerdictLabels[verdict] : "자료 부족"}</span>;
 }
