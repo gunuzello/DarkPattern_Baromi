@@ -4,7 +4,9 @@ import { scanStatusLabels } from "@/lib/labels";
 
 /** Result of one of the 16 checks. Shape + label, never color alone. */
 export type ResultKind = "risk" | "review" | "clear" | "none";
-export const resultLabels: Record<ResultKind, string> = { risk: "위험 신호", review: "검토 필요", clear: "미관찰", none: "미검사" };
+export const resultLabels: Record<ResultKind, string> = { risk: "위험", review: "검토 필요", clear: "안전", none: "미검사" };
+/** Plain wording for shop owners (report wireframe): what the result asks them to do. */
+export const plainLabels: Record<ResultKind, string> = { risk: "고쳐야 해요", review: "확인해 보세요", clear: "괜찮아요", none: "점검 못 했어요" };
 
 type MarkKind = ResultKind | "run" | "wait" | "done" | "stop" | "partial";
 
@@ -18,7 +20,7 @@ export function Mark({ kind }: { kind: MarkKind }) {
     case "clear":
       return <svg {...common}><circle cx="6" cy="6" r="5" fill="var(--clear)" /></svg>;
     case "none":
-      return <svg {...common}><circle cx="6" cy="6" r="4.5" fill="none" stroke="#868c96" strokeWidth="1.5" strokeDasharray="2 2" /></svg>;
+      return <svg {...common}><circle cx="6" cy="6" r="4.5" fill="none" stroke="var(--untested)" strokeWidth="1.8" /></svg>;
     case "done":
       return <svg {...common}><circle cx="6" cy="6" r="5" fill="var(--brand)" /></svg>;
     case "wait":
@@ -43,6 +45,11 @@ export function Badge({ kind, children, large }: { kind: MarkKind; children: Rea
 
 export function ResultBadge({ kind, large }: { kind: ResultKind; large?: boolean }) {
   return <Badge kind={kind} large={large}>{resultLabels[kind]}</Badge>;
+}
+
+/** Tinted verdict badge used in report group headers and detail panels (shape + label). */
+export function VerdictBadge({ kind }: { kind: ResultKind }) {
+  return <span className={`verdict verdict--${kind}`}><Mark kind={kind} />{resultLabels[kind]}</span>;
 }
 
 const statusMark: Record<ScanStatus, MarkKind> = {

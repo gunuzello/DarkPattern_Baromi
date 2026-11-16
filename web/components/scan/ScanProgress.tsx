@@ -160,7 +160,7 @@ export function ScanProgress({ id }: { id: string }) {
           <div style={{ display: "flex", gap: 32 }}>
             <Stat label="위험 신호" value={scan.summary.suspected} kind="risk" />
             <Stat label="검토 필요" value={scan.summary.reviewNeeded} kind="review" />
-            {scan.summary.notObserved != null ? <Stat label="미관찰" value={scan.summary.notObserved} kind="clear" /> : null}
+            {scan.summary.notObserved != null ? <Stat label="안전" value={scan.summary.notObserved} kind="clear" /> : null}
             <Stat label="미검사" value={scan.summary.notTested} kind="none" />
           </div>
           <ButtonLink href={`/report/${encodeURIComponent(id)}`} size="lg">진단 결과 보기</ButtonLink>

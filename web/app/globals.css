@@ -53,6 +53,11 @@
   --clear-bg: #ecfdf3;
   --clear-line: #c7eedb;
   --unchecked: #a0a4ab;
+  /* 점검 못 했어요 (not tested): blue, distinct from the brand gradient */
+  --untested: #5b74c4;
+  --untested-ink: #34488a;
+  --untested-bg: #f0f3fb;
+  --untested-line: #d5ddf3;
 
   /* type */
   --font-sans: var(--font-inter), var(--font-noto), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;

@@ -69,7 +69,7 @@ export default function Home() {
               <div className="kpi-row">
                 <div><Stat label="위험 신호" value="3" sub="규칙과 증거로 확인" kind="risk" /></div>
                 <div><Stat label="검토 필요" value="2" sub="문구 후보, 운영자 검토" kind="review" /></div>
-                <div><Stat label="미관찰" value="8" sub="검사한 범위 기준" kind="clear" /></div>
+                <div><Stat label="안전" value="8" sub="검사한 범위 기준" kind="clear" /></div>
                 <div><Stat label="미검사" value="3" sub="이유와 함께 표시" kind="none" /></div>
               </div>
               <div style={{ padding: "32px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
