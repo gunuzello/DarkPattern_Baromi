@@ -7,7 +7,7 @@ import { ruleDecisionCriteria } from "./rule-strategy";
 import type { RuleCoverage } from "./rule-coverage";
 
 export type ReviewCandidate = { id: string; kind: string; stage: string; text: string; reason: string; evidenceIds: string[]; ruleType?: string; baselineStatus?: string; decisionCriteria?: string; observedFacts?: string[]; missingInformation?: string[]; inspectionScope?: string[]; counterEvidence?: string[] };
-export type SnapshotEvidence = { evidenceId?: string; stage?: string; url?: string; priceLines?: string[]; textLines?: string[]; options?: unknown[]; fees?: unknown[]; precheckedSignals?: unknown[]; surfaceSignals?: unknown[]; decisionControls?: unknown[] };
+export type SnapshotEvidence = { evidenceId?: string; stage?: string; screenshot?: string; url?: string; priceLines?: string[]; textLines?: string[]; options?: unknown[]; fees?: unknown[]; precheckedSignals?: unknown[]; surfaceSignals?: unknown[]; decisionControls?: unknown[] };
 export type ReviewEvidence = {
   evidenceId: string;
   source: "snapshot" | "crawl_page" | "surface_observation" | "interaction";

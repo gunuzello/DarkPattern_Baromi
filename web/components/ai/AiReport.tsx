@@ -246,9 +246,11 @@ function AiItemCard({ result, base, scanId, open, onToggle }: { result: AiItemRe
                 ))}
               </ul>
               {/* Only a real captured screen; the sample has none, and text evidence is enough on its own. */}
-              {result.screenshotStage && !usesSample(scanId) ? (
-                <div className="ai-shot"><EvidenceShot scanId={scanId} stage={result.screenshotStage} priceLines={result.evidence.filter((ev) => ev.stage === result.screenshotStage).map((ev) => ev.text)} /></div>
-              ) : null}
+              {(result.screenshotStages ?? (result.screenshotStage ? [result.screenshotStage] : []))
+                .filter((stage, index, all) => all.indexOf(stage) === index)
+                .map((stage) => !usesSample(scanId) ? (
+                  <div className="ai-shot" key={stage}><EvidenceShot scanId={scanId} stage={stage} priceLines={result.evidence.filter((ev) => ev.stage === stage).map((ev) => ev.text)} /></div>
+                ) : null)}
             </div>
           ) : null}
           <div className="ai-block">
