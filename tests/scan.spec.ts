@@ -115,7 +115,7 @@ test("AI에 전달하는 크롤링 증거는 후보의 관찰 사실과 관련�
     siteCrawl: { pages: [page] },
   });
   expect(payload[0].evidence[0].text).toBe("남은 시간 04:45");
-  expect(payload[0].evidence[0].matchingVisualFacts?.map(({ text }) => text)).toEqual(["남은 시간 04:45"]);
+  expect(payload[0].evidence[0].matchingVisualFacts).toBeUndefined();
 });
 
 test("AI 공급자에는 내부 증거 ID를 보내지 않고 응답 후보를 원래 보고서에 연결한다", () => {
