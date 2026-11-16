@@ -19,7 +19,7 @@ import { encryptCredentials } from "../../../../src/credential-vault";
 import { deleteSpringScan, deleteSpringShop, listSpringShopScans, listSpringShops, mirrorSpringScan, mirrorSpringShop, notifySpringScanStatus, readSpringScan, readSpringShop, springAuthoritative, springReadiness } from "../../../../src/spring-status";
 import { diagnosticSurfaceKinds, type DiagnosticSurfaceKind } from "../../../../src/diagnostic-surfaces";
 import { scanStaleBefore } from "../../../../src/scan-timeout";
-import { supabaseAuthEnabled, supabaseOwner } from "../../../../src/supabase-auth";
+import { supabaseAuthEnabled, supabaseEmail, supabaseOwner } from "../../../../src/supabase-auth";
 import { buildRuleCoverage, findingsForRuleCoverage, summarizeRuleCoverage, type RuleCoverage } from "../../../../src/rule-coverage";
 import { buildAiCandidatePayload } from "../../../../src/ai-review-payload";
 import { legalRules } from "../../../../src/legal-rules";
@@ -28,6 +28,7 @@ import { cloudRunJobsEnabled, executeScanJob } from "../../../../src/cloud-run-j
 
 type Context = { params: Promise<{ path: string[] }> };
 type Report = Omit<Awaited<ReturnType<typeof scanDemo>>, "scenario"> & { scenario: string; ruleCoverage?: RuleCoverage };
+const aiPremiumAccountEmail = "luckdaniel@naver.com";
 const cookie = "darkpattern-session";
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const normalizeShopUrl = (value: string) => {
@@ -115,7 +116,7 @@ function ruleScreenshotRefs(report: Report, coverage: RuleCoverage, scanId: stri
       .map((snapshot) => ({ evidenceId: snapshot.evidenceId ?? `evidence:${snapshot.stage}`, url: `/api/v1/evidences/${scanId}-${snapshot.stage}` }))]));
 }
 
-async function normalizeSpringReport(raw: Record<string, unknown>, scanId: string, ownerHash: string) {
+async function normalizeSpringReport(raw: Record<string, unknown>, scanId: string, ownerHash: string, aiEligible: boolean) {
   const report = typeof raw.reportJson === "string" ? JSON.parse(raw.reportJson) as Record<string, unknown> : raw;
   const local = await db().scan.findFirst({
     where: { id: scanId, shop: { ownerHash } },
@@ -176,7 +177,7 @@ async function normalizeSpringReport(raw: Record<string, unknown>, scanId: strin
     durationMs: report.durationMs ?? local?.durationMs ?? null,
     phaseResults, coverage, surfaceCoverage, ruleCoverage, ruleScreenshotRefs: ruleScreenshotRefs(report as Report, ruleCoverage, scanId), summary, findings: findingsForRuleCoverage(findings as Finding[], ruleCoverage),
     comparison,
-    aiEligible: local?.shop?.plan === "PREMIUM",
+    aiEligible: aiEligible || local?.shop?.plan === "PREMIUM",
     aiReviewCandidateCount,
     aiReview: serializeAiReview(local?.aiReview ?? null),
     source: "SPRING_POSTGRES",
@@ -371,12 +372,13 @@ export async function POST(request: NextRequest, context: Context) {
   if (resource === "scans" && id && action === "ai-review" && route.length === 3) {
     const limited = rateLimit(request, "ai-review", 10, 60 * 60 * 1000);
     if (limited) return limited;
+    const aiPremiumAccount = await supabaseEmail(request) === aiPremiumAccountEmail;
     const scan = await db().scan.findFirst({
       where: { id, shop: { ownerHash }, status: { in: ["COMPLETED", "PARTIAL"] }, reportPath: { not: null } },
       select: { reportPath: true, shop: { select: { plan: true } }, aiReview: true },
     });
     if (!scan?.reportPath) return notFound();
-    if (scan.shop?.plan !== "PREMIUM") return error("AI 정밀 분석은 유료 플랜에서 사용자가 별도로 요청할 수 있습니다.", 402);
+    if (scan.shop?.plan !== "PREMIUM" && !aiPremiumAccount) return error("AI 정밀 분석은 유료 플랜에서 사용자가 별도로 요청할 수 있습니다.", 402);
     const selected = body?.selectedRuleTypes;
     if (!Array.isArray(selected) || !selected.length || selected.length > 16 || selected.some((type: unknown) => typeof type !== "string" || !Object.hasOwn(legalRules, type)) || new Set(selected).size !== selected.length) return error("서로 다른 진단 유형을 1~16개 선택해 주세요.", 400);
     if (scan.aiReview?.status === "QUEUED" || scan.aiReview?.status === "RUNNING") return Response.json({ id: scan.aiReview.id, status: scan.aiReview.status }, { status: 202 });
@@ -474,6 +476,7 @@ export async function GET(request: NextRequest, context: Context) {
   if (await hasInvalidBearer(request)) return error("유효하지 않은 인증 토큰입니다.", 401);
   const session = await supabaseOwner(request) ?? request.cookies.get(cookie)?.value;
   if (!session) return supabaseAuthEnabled() ? error("로그인이 필요합니다.", 401) : notFound();
+  const aiPremiumAccount = await supabaseEmail(request) === aiPremiumAccountEmail;
   const ownerHash = hash(session);
   if (route.join("/") === "shops") {
     const limitParam = Number(request.nextUrl.searchParams.get("limit") ?? 50);
@@ -622,7 +625,7 @@ export async function GET(request: NextRequest, context: Context) {
     if (spring) {
       const normalizedStatus = normalizeScanStatus(spring.status);
       if (action === "report") {
-        const report = await normalizeSpringReport(spring, id, ownerHash);
+        const report = await normalizeSpringReport(spring, id, ownerHash, aiPremiumAccount);
         const response = Response.json(report, {
           headers: { "Cache-Control": "private, no-store" },
         });
@@ -722,7 +725,7 @@ export async function GET(request: NextRequest, context: Context) {
       durationMs: scan.durationMs,
       comparison, scanId: scan.id, shopId: scan.shopId, coverage, surfaceCoverage,
       ruleCoverage: finalRuleCoverage, ruleScreenshotRefs: report && finalRuleCoverage ? ruleScreenshotRefs(report, finalRuleCoverage, scan.id) : {}, summary: finalSummary,
-      aiEligible: scan.shop?.plan === "PREMIUM", aiReviewCandidateCount, aiReview,
+      aiEligible: aiPremiumAccount || scan.shop?.plan === "PREMIUM", aiReviewCandidateCount, aiReview,
       findings: visibleFindings });
     if (request.nextUrl.searchParams.get("download") === "1") {
       response.headers.set("Content-Disposition", `attachment; filename="baromi-${scan.id}.json"`);

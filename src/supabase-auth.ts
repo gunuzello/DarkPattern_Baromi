@@ -45,3 +45,23 @@ export async function supabaseOwner(request: NextRequest): Promise<string | null
     return null;
   }
 }
+
+/** Return the email only from a verified Supabase access token/cookie claim. */
+export async function supabaseEmail(request: NextRequest): Promise<string | null> {
+  const authorization = request.headers.get("authorization");
+  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (authorization?.toLowerCase().startsWith("bearer ") && !token) return null;
+  const { url, key } = config();
+  if (!url || !key) return null;
+
+  try {
+    const client = token
+      ? createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
+      : createServerClient(url, key, { cookies: { getAll: () => request.cookies.getAll(), setAll: () => undefined } });
+    const { data, error } = token ? await client.auth.getClaims(token) : await client.auth.getClaims();
+    const email = data?.claims?.email;
+    return !error && typeof email === "string" ? email.trim().toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
