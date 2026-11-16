@@ -107,7 +107,7 @@ function scanBody({ credentials, baselineScanId, ...rest }: ScanRequest) {
     ...rest,
     flows: ["PURCHASE"],
     productLimit: 1,
-    baselineScanId: baselineScanId ?? null,
+    ...(baselineScanId ? { baselineScanId } : {}),
     ...(rest.profile === "DYNAMIC" && credentials ? { credentials } : {}),
   };
 }
