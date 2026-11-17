@@ -7,7 +7,7 @@ import { ruleDecisionCriteria } from "./rule-strategy";
 import type { RuleCoverage } from "./rule-coverage";
 
 export type ReviewCandidate = { id: string; kind: string; stage: string; text: string; reason: string; evidenceIds: string[]; ruleType?: string; baselineStatus?: string; decisionCriteria?: string; observedFacts?: string[]; missingInformation?: string[]; inspectionScope?: string[]; counterEvidence?: string[] };
-export type SnapshotEvidence = { evidenceId?: string; stage?: string; screenshot?: string; url?: string; priceLines?: string[]; textLines?: string[]; options?: unknown[]; fees?: unknown[]; precheckedSignals?: unknown[]; surfaceSignals?: unknown[]; decisionControls?: unknown[] };
+export type SnapshotEvidence = { evidenceId?: string; stage?: string; screenshot?: string; url?: string; priceLines?: string[]; payableAmount?: number; payableCandidates?: unknown[]; textLines?: string[]; options?: unknown[]; choiceControls?: unknown[]; fees?: unknown[]; precheckedSignals?: unknown[]; surfaceSignals?: unknown[]; decisionControls?: unknown[] };
 export type ReviewEvidence = {
   evidenceId: string;
   source: "snapshot" | "crawl_page" | "surface_observation" | "interaction";
@@ -17,7 +17,10 @@ export type ReviewEvidence = {
   title?: string;
   text?: string;
   priceLines?: string[];
+  payableAmount?: number;
+  payableCandidates?: unknown[];
   options?: unknown[];
+  choiceControls?: unknown[];
   fees?: unknown[];
   precheckedSignals?: unknown[];
   surfaceSignals?: unknown[];
@@ -77,8 +80,10 @@ function snapshotEvidence(item: SnapshotEvidence): ReviewEvidence | null {
   return {
     evidenceId: item.evidenceId, source: "snapshot", stage: item.stage, url: safeUrl(item.url),
     priceLines: (item.priceLines ?? []).slice(0, 20).map((line) => redact(line).slice(0, 500)),
+    payableAmount: item.payableAmount,
+    payableCandidates: redactArray(item.payableCandidates),
     text: (item.textLines ?? []).slice(0, 30).map((line) => redact(line).slice(0, 500)).join("\n"),
-    options: redactArray(item.options), fees: redactArray(item.fees),
+    options: redactArray(item.options), choiceControls: redactArray(item.choiceControls), fees: redactArray(item.fees),
     precheckedSignals: redactArray(item.precheckedSignals), surfaceSignals: redactArray(item.surfaceSignals),
     decisionControls: redactArray(item.decisionControls),
   };

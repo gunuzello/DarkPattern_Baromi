@@ -391,7 +391,7 @@ export async function POST(request: NextRequest, context: Context) {
     const job = await db().aiReview.upsert({
       where: { scanId: id },
       create: { id: randomUUID(), scanId: id, status: "QUEUED", candidateCount: pending.length, resultJson: JSON.stringify({ selectedRuleTypes: pending, pendingRuleTypes: pending, results: [] }) },
-      update: { status: "QUEUED", requestedAt: new Date(), startedAt: null, completedAt: null, resultJson: JSON.stringify({ ...previous, selectedRuleTypes: pending, pendingRuleTypes: pending, results: previous?.results ?? [] }), error: null, candidateCount: pending.length },
+      update: { status: "QUEUED", requestedAt: new Date(), startedAt: null, completedAt: null, resultJson: JSON.stringify({ ...previous, selectedRuleTypes: pending, pendingRuleTypes: pending, transientRetryAttempted: false, results: previous?.results ?? [] }), error: null, candidateCount: pending.length },
     });
     if (cloudRunJobsEnabled()) {
       try { await executeScanJob(`ai:${job.id}`); }
