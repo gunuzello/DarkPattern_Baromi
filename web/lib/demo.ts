@@ -112,8 +112,25 @@ const doneSurfaces: Record<SurfaceKind, SurfaceStatus> = {
 };
 const surfaceAt: [SurfaceKind, number][] = [["CATALOG", 5], ["AUTH", 6], ["COUPON", 8], ["RECOMMENDATION", 8], ["SUBSCRIPTION", 10], ["CANCELLATION", 12], ["POLICY", 15]];
 
+/** Sample history rows open in the state their row shows (queued, running, cancelled, failed, …). */
+function presetScan(scanId: string): { stored: Stored; override?: Partial<ScanState> } | undefined {
+  const now = Date.now();
+  const done = now - RUN_SECONDS * 1000;
+  const base = { profile: "DYNAMIC", viewport: "DESKTOP", purchasePath: "CART" } as const;
+  switch (scanId) {
+    case "demo-q": return { stored: { ...base, viewport: "MOBILE", purchasePath: "DIRECT", start: now - 1000 } };
+    case "demo-r": return { stored: { ...base, start: now - 12000 } };
+    case "sample-1111": return { stored: { ...base, profile: "CONTEST", start: done } };
+    case "sample-1110": return { stored: { ...base, viewport: "MOBILE", start: done }, override: { status: "PARTIAL" } };
+    case "sample-1109": return { stored: { ...base, purchasePath: "DIRECT", start: now - 30000, cancelAt: now - 11000 } };
+    case "sample-1108": return { stored: { ...base, start: done }, override: { status: "FAILED", hasReport: false, ruleCoverage: null } };
+    default: return undefined;
+  }
+}
+
 export async function getScan(scanId: string): Promise<ScanState> {
-  const stored = load()[scanId] ?? { start: Date.now() - RUN_SECONDS * 1000, profile: "DYNAMIC", viewport: "DESKTOP", purchasePath: "CART" };
+  const preset = presetScan(scanId);
+  const stored = load()[scanId] ?? preset?.stored ?? { start: Date.now() - RUN_SECONDS * 1000, profile: "DYNAMIC", viewport: "DESKTOP", purchasePath: "CART" };
   const now = Date.now();
   const cancelled = stored.cancelAt != null && now - stored.cancelAt > 1500;
   const t = ((cancelled ? stored.cancelAt! : now) - stored.start) / 1000;
@@ -148,7 +165,7 @@ export async function getScan(scanId: string): Promise<ScanState> {
       ? phase(4, 20, "COVERED", "내부 경로 42곳을 읽기 전용으로 둘러봤어요.")
       : { status: "SKIPPED", reason: "전체 화면 탐색은 전체 구매 흐름 진단에서 해요.", evidenceIds: [] },
   };
-  return {
+  const state: ScanState = {
     scanId,
     shopId: "demo-shop",
     executionMode: dynamic ? "DYNAMIC" : "STATIC",
@@ -176,6 +193,7 @@ export async function getScan(scanId: string): Promise<ScanState> {
       notObserved: active ? 0 : 8,
     },
   };
+  return preset?.override ? { ...state, ...preset.override } : state;
 }
 
 const sampleRuleCoverage: RuleCoverage = {
@@ -274,8 +292,8 @@ let aiStartedAt: number | null = null;
 
 export async function getReport(scanId: string): Promise<Report> {
   await wait(300);
-  const stored = load()[scanId];
-  const base: Report = { ...sampleReport, scanId };
+  const stored = load()[scanId] ?? presetScan(scanId)?.stored;
+  const base: Report = { ...sampleReport, scanId, ...(scanId === "sample-1110" ? { scanStatus: "PARTIAL" as const, viewport: "MOBILE" as const } : {}) };
   if (stored && stored.profile !== "DYNAMIC") {
     return {
       ...base, executionMode: "STATIC", durationMs: 8400, stageTimingsMs: { product: 3200 },

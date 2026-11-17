@@ -53,9 +53,8 @@ export type AiDiagnosis = {
  * Where AI 정밀 점검 data comes from:
  * - "mock": the sample/demo report, or NEXT_PUBLIC_AI_DIAGNOSIS=mock (for review builds)
  * - "api": use the backend's selected-rule review endpoint
- * - "legacy": keep the older review-candidate view
  */
-export function aiDiagnosisMode(scanId: string): "mock" | "api" | "legacy" {
+export function aiDiagnosisMode(scanId: string): "mock" | "api" {
   const flag = process.env.NEXT_PUBLIC_AI_DIAGNOSIS;
   if (usesSample(scanId) || flag === "mock") return "mock";
   return "api";
