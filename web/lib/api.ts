@@ -120,9 +120,9 @@ export const api = {
   listShops: (limit = 50) =>
     isDemo ? demo.listShops() : request<ShopListResponse>(`shops?limit=${Math.max(1, Math.min(100, limit))}`),
   createShop: (url: string, consent: boolean, nickname?: string) =>
-    isDemo ? demo.createShop(url) : post<CreateShopResponse>("shops", { url, consent, ...(nickname?.trim() ? { nickname: nickname.trim() } : {}) }),
+    isDemo ? demo.createShop(url, nickname) : post<CreateShopResponse>("shops", { url, consent, ...(nickname?.trim() ? { nickname: nickname.trim() } : {}) }),
   renameShop: (shopId: string, nickname: string) =>
-    request<Shop>(`shops/${seg(shopId)}`, { method: "PATCH", body: JSON.stringify({ nickname }) }),
+    isDemo ? demo.renameShop(shopId, nickname) : request<Shop>(`shops/${seg(shopId)}`, { method: "PATCH", body: JSON.stringify({ nickname }) }),
   getShop: (shopId: string) =>
     isDemo ? demo.getShop(shopId) : request<Shop>(`shops/${seg(shopId)}`),
   verifyShop: (shopId: string) =>

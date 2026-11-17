@@ -14,6 +14,7 @@ import { hostOf } from "@/lib/format";
 import { useBackToLogin } from "@/lib/session";
 import type { FindingType, Report } from "@/lib/types";
 import { AiReport } from "./AiReport";
+import { useShopName } from "@/components/report/useShopName";
 
 /**
  * AI 정밀 점검 (spec: AI 정밀 점검 항목 선택 → 진행 → 리포트). Lives at /report/[id]/ai so the
@@ -27,6 +28,7 @@ export function AiDiagnosisPage({ id }: { id: string }) {
   const [choosing, setChoosing] = useState(false);
   const mode = aiDiagnosisMode(id);
   const reportHref = `/report/${encodeURIComponent(id)}`;
+  const shopName = useShopName(report?.shopId, report?.targetUrl, !(usesSample(id) && !isDemo));
 
   const load = useCallback(async () => {
     try {
@@ -70,7 +72,7 @@ export function AiDiagnosisPage({ id }: { id: string }) {
 
   const items = reportItems(report);
   const crumbs = [
-    ...(usesSample(id) && !isDemo ? [{ label: "예시 점검 결과", href: reportHref }] : [{ label: "내 쇼핑몰", href: "/shops" }, { label: hostOf(report.targetUrl), href: reportHref }]),
+    ...(usesSample(id) && !isDemo ? [{ label: "예시 점검 결과", href: reportHref }] : [{ label: "내 쇼핑몰", href: "/shops" }, { label: shopName, href: reportHref }]),
     { label: "AI 정밀 점검" },
   ];
 

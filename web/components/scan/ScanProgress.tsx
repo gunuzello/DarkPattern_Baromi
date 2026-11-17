@@ -17,6 +17,7 @@ import { phaseFor, phaseStatusLabels, phaseTone, surfacePhase } from "@/lib/phas
 import { stages, surfaceKinds, type PhaseStatus, type ScanState } from "@/lib/types";
 import { PhaseBadge } from "@/components/report/ReportSections";
 import { useRescan } from "./useRescan";
+import { useShopName } from "@/components/report/useShopName";
 
 const titles: Record<ScanState["status"], string> = {
   QUEUED: "점검 순서를 기다리고 있어요",
@@ -50,6 +51,7 @@ export function ScanProgress({ id }: { id: string }) {
   const keepButton = useRef<HTMLButtonElement>(null);
   const backToLogin = useBackToLogin();
   const rescanner = useRescan(setError);
+  const shopName = useShopName(scan?.shopId, undefined);
   const [deduplicated, setDeduplicated] = useState(false);
   useEffect(() => setDeduplicated(readFlag("dedup")), []);
 
@@ -150,7 +152,7 @@ export function ScanProgress({ id }: { id: string }) {
     <>
       <PageHead
         title={stopping ? "중단 요청을 처리하고 있어요" : titles[scan.status]}
-        crumbs={[{ label: "내 쇼핑몰", href: "/shops" }, { label: "점검 기록", href: `/shop/${encodeURIComponent(scan.shopId)}` }, { label: `${viewportLabel(scan.viewport)}, ${pathLabel(scan.purchasePath)}` }]}
+        crumbs={[{ label: "내 쇼핑몰", href: "/shops" }, { label: shopName === "쇼핑몰" ? "점검 기록" : shopName, href: `/shop/${encodeURIComponent(scan.shopId)}` }, { label: `${viewportLabel(scan.viewport)}, ${pathLabel(scan.purchasePath)}` }]}
         meta={<><ScanStatusBadge status={scan.status} label={stopping ? "중단 요청 처리 중" : undefined} /><span>{staticMode ? "공개 화면 점검" : "전체 구매 흐름 점검"}</span></>}
         actions={<>
           {active ? <Button variant="secondary" onClick={() => setConfirm(true)} disabled={pending || scan.cancelRequested}>점검 중단</Button> : null}

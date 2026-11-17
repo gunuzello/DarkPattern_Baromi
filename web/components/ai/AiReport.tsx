@@ -102,7 +102,7 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
         <div className="ai-hero__meta">
           <span className="ai-kicker"><Icon name="spark" size={14} />AI 분석</span>
           <span>점검한 쇼핑몰 <b>{report.targetUrl}</b></span>
-          <span>점검 일시 <b className="tnum">{formatLongDate(diagnosis.completedAt ?? diagnosis.createdAt)}</b></span>
+          {formatLongDate(diagnosis.completedAt ?? diagnosis.createdAt) ? <span>점검 일시 <b className="tnum">{formatLongDate(diagnosis.completedAt ?? diagnosis.createdAt)}</b></span> : null}
           <span>AI 분석 항목 <b className="tnum">{diagnosis.requestedTypes.length}개</b></span>
         </div>
         <h2 id="ai-summary-title" className="sr-only">종합 점검 결과</h2>
@@ -255,8 +255,14 @@ function AiItemCard({ result, base, scanId, open, onToggle }: { result: AiItemRe
           ) : null}
           <div className="ai-block">
             <h4>{result.status !== "ANALYZED" ? "분석하지 못한 이유" : "AI 판단 이유"}</h4>
-            <p>{result.reasoning}</p>
+            <p>{result.reasoning || (result.status === "FAILED" ? "AI 제공자 응답을 받지 못했어요. 다시 요청하면 이 항목만 다시 분석할 수 있어요." : "판단 이유가 함께 전달되지 않았어요.")}</p>
           </div>
+          {result.limitations?.length ? (
+            <div className="ai-block">
+              <h4>이번 분석의 한계</h4>
+              <ul className="ai-limits">{result.limitations.map((text) => <li key={text}>{text}</li>)}</ul>
+            </div>
+          ) : null}
           {result.recommendations.length ? (
             <div className="ai-block">
               <h4>개선 권고사항</h4>

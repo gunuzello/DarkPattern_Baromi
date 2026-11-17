@@ -104,9 +104,9 @@ export function ShopHistory({ shopId }: { shopId: string }) {
     <>
       <PageHead
         title="점검 기록"
-        crumbs={[{ label: "내 쇼핑몰", href: "/shops" }, { label: shop ? hostOf(shop.url) : "쇼핑몰" }]}
+        crumbs={[{ label: "내 쇼핑몰", href: "/shops" }, { label: shop ? shop.nickname?.trim() || hostOf(shop.url) : "쇼핑몰" }]}
         meta={shop ? <>
-          <span style={{ fontWeight: 600, color: "var(--ink)" }}>{hostOf(shop.url)}</span>
+          <span style={{ fontWeight: 600, color: "var(--ink)" }}>{shop.nickname?.trim() || hostOf(shop.url)}</span>{shop.nickname?.trim() ? <span className="faint">{hostOf(shop.url)}</span> : null}
           {shop.verifiedAt ? <Badge kind="clear">소유 확인됨</Badge> : <Badge kind="none">소유 확인 전</Badge>}
           {items?.length ? <span>첫 점검 {formatLongDate(items[items.length - 1].createdAt)}</span> : null}
         </> : undefined}
@@ -201,7 +201,7 @@ export function ShopHistory({ shopId }: { shopId: string }) {
       ) : null}
       {removeShop ? (
         <ConfirmDialog title="쇼핑몰을 삭제할까요?" confirmLabel="쇼핑몰 삭제" onCancel={() => setRemoveShop(false)} onConfirm={confirmRemoveShop} busy={busy}>
-          <p>{shop ? hostOf(shop.url) : "이 쇼핑몰"}과 모든 점검 기록, 확인 화면이 지워져요. 되돌릴 수 없어요.</p>
+          <p>{shop ? shop.nickname?.trim() || hostOf(shop.url) : "이 쇼핑몰"}의 모든 점검 기록, 확인 화면이 지워져요. 되돌릴 수 없어요.</p>
           {dialogError ? <p style={{ marginTop: 8, color: "var(--risk-ink)" }}>{dialogError}</p> : null}
         </ConfirmDialog>
       ) : null}

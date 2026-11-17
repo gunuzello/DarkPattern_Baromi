@@ -42,28 +42,28 @@ export function WaitlistForm() {
     return (
       <p role="status" className="waitlist__done">
         <Icon name="check" size={16} color="var(--clear-ink)" />
-        신청했어요. 출시되면 {email}로 알려드릴게요.
+        신청했어요. {email}로 파일럿 안내를 보내 드릴게요.
       </p>
     );
   }
 
-  const mailto = `mailto:${CONTACT}?subject=${encodeURIComponent("AI 정밀 점검 출시 소식 신청")}&body=${encodeURIComponent(`출시 소식 받을 주소: ${email}`)}`;
+  const mailto = `mailto:${CONTACT}?subject=${encodeURIComponent("AI 정밀 점검 파일럿 신청")}&body=${encodeURIComponent(`파일럿 안내 받을 주소: ${email}`)}`;
 
   return (
     <form className="waitlist" onSubmit={submit} noValidate={false}>
       <label className="field" style={{ minWidth: 0 }}>
-        <span className="sr-only">출시 소식 받을 이메일</span>
+        <span className="sr-only">파일럿 신청 이메일</span>
         <input
           className="input"
           type="email"
           required
           autoComplete="email"
-          placeholder="출시 소식 받을 이메일"
+          placeholder="파일럿 신청 이메일"
           value={email}
           onChange={(event) => { setEmail(event.target.value); if (state.kind !== "idle" && state.kind !== "sending") setState({ kind: "idle" }); }}
         />
       </label>
-      <Button type="submit" variant="secondary" loading={state.kind === "sending"} loadingText="보내는 중">출시 소식 받기</Button>
+      <Button type="submit" variant="secondary" loading={state.kind === "sending"} loadingText="보내는 중">파일럿 신청</Button>
       {state.kind === "error" ? <p role="alert" className="waitlist__note waitlist__note--error">{state.message}</p> : null}
       {state.kind === "manual" ? (
         <p role="status" className="waitlist__note">

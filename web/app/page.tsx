@@ -140,22 +140,22 @@ export default function Home() {
           <div className="lp-wrap lp-section">
             <div className="lp-section__head">
               <h2 id="pricing-title" className="t-section">요금제</h2>
-              <p>출시 전에는 무료로 점검할 수 있어요. 정식 요금은 실제 쇼핑몰 평가를 마친 뒤 안내해요.</p>
+              <p>기본 점검은 무료예요. AI 정밀 점검은 파일럿으로 운영하고, 가격은 파일럿을 마친 뒤 안내해요.</p>
             </div>
             <div className="duo">
               <div>
                 <span style={{ fontSize: 18, fontWeight: 700 }}>기본 점검</span>
-                <span style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>출시 전 무료</span>
-                <p className="muted">기본 엔진으로 16가지 항목을 점검하고, 근거가 연결된 보고서를 받아보세요. 정식 요금은 평가 후 안내해요.</p>
+                <span style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>무료</span>
+                <p className="muted">16가지 항목을 자체 규칙으로 점검하고, 확인 화면과 가격 기록이 연결된 결과를 받아보세요.</p>
                 <div style={{ marginTop: "auto" }}><ButtonLink href="/scan/new" variant="brand">무료로 점검하기</ButtonLink></div>
               </div>
               <div>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 18, fontWeight: 700 }}>AI 정밀 점검</span>
-                  <span className="soon-badge">준비 중</span>
+                  <span className="soon-badge">파일럿 운영 중</span>
                 </span>
-                <span className="faint" style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>유료 예정</span>
-                <p className="muted">점검 결과에서 원하는 항목을 골라 AI가 위험·부분적 안전·안전으로 한 번 더 판단해요. 기본 점검 결과는 덮어쓰지 않아요. 요금은 출시할 때 안내해요.</p>
+                <span style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: "-0.03em", fontWeight: 800 }}>건별 이용</span>
+                <p className="muted">점검 결과에서 원하는 항목을 골라 AI가 위험·부분적 안전·안전으로 한 번 더 판단해요. 기본 점검 결과는 덮어쓰지 않아요. 가격은 파일럿을 마친 뒤 안내해요.</p>
                 <div style={{ marginTop: "auto" }}><WaitlistForm /></div>
               </div>
             </div>
