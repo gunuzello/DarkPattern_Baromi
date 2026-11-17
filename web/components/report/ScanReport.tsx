@@ -48,7 +48,8 @@ export function ScanReport({ id }: { id: string }) {
   const listRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const aiHref = `/report/${encodeURIComponent(id)}/ai`;
-  const [diag, setDiag] = useState<AiDiagnosis | null>(null);
+  /** undefined while the AI state is still loading, null when no AI request exists. */
+  const [diag, setDiag] = useState<AiDiagnosis | null | undefined>(undefined);
   const backToLogin = useBackToLogin();
   const rescanner = useRescan(setError);
   const pending = rescanner.pending;
@@ -57,7 +58,7 @@ export function ScanReport({ id }: { id: string }) {
     try {
       const next = await api.getReport(id);
       setReport(next);
-      aiDiagnosis.get(id).then(setDiag).catch(() => undefined);
+      aiDiagnosis.get(id).then(setDiag).catch(() => setDiag(null));
       return next;
     } catch (cause) {
       if (cause instanceof ApiError && cause.sessionLost && !usesSample(id)) { backToLogin(); return undefined; }
@@ -239,7 +240,7 @@ export function ScanReport({ id }: { id: string }) {
             <span className="rv-pill">{staticMode ? "공개 화면 읽기" : "실제 구매 과정 확인"}</span>
             <span className="rv-pill">{viewportLabel(report.viewport)} · {pathLabel(report.purchasePath)}</span>
             <span className="rv-pill tnum">걸린 시간 {formatDuration(report.durationMs)}</span>
-            <span className="faint">{diag?.status === "COMPLETED" ? `AI 정밀 점검 ${diag.requestedTypes.length}개 항목` : "AI 사용 안 함"}</span>
+            {diag === undefined ? null : <span className="faint">{diag?.status === "COMPLETED" ? `AI 정밀 점검 ${diag.requestedTypes.length}개 항목` : "AI 사용 안 함"}</span>}
           </div>
         </section>
 
@@ -253,9 +254,13 @@ export function ScanReport({ id }: { id: string }) {
               <span className="rv-card__kicker">유료 · AI 정밀 점검</span>
               <span className="rv-card__title">원하는 항목을 골라 AI가 한 번 더 판단해 드려요</span>
               <p>16가지 중 어떤 항목이든 고를 수 있어요. AI는 위험, 부분적 안전, 안전으로 판단하고, 결과는 기본 점검과 따로 리포트로 보여드려요.</p>
-              <ButtonLink variant="secondary" block href={aiHref}>
-                {diag?.status === "COMPLETED" ? "AI 리포트 보기" : diag?.status === "QUEUED" || diag?.status === "RUNNING" ? "AI 점검 진행 보기" : "AI 정밀 점검 받기"}
-              </ButtonLink>
+              {diag === undefined ? (
+                <Button variant="secondary" block disabled>AI 정밀 점검 상태 확인 중</Button>
+              ) : (
+                <ButtonLink variant="secondary" block href={aiHref}>
+                  {diag?.status === "COMPLETED" ? "AI 리포트 보기" : diag?.status === "QUEUED" || diag?.status === "RUNNING" ? "AI 점검 진행 보기" : "AI 정밀 점검 받기"}
+                </ButtonLink>
+              )}
           </div>
         </aside>
       </div>

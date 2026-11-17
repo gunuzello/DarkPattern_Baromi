@@ -11,6 +11,7 @@ import { ruleByType, rules, stageLabels } from "@/lib/labels";
 import { useBackToLogin } from "@/lib/session";
 import type { FindingDetail } from "@/lib/types";
 import { EvidenceShot } from "./EvidenceShot";
+import { visibleEvidenceIds } from "@/lib/evidence";
 import { Block, Checklist } from "./TypeDetail";
 
 /**
@@ -113,10 +114,10 @@ export function FindingDetailView({ scanId, findingId }: { scanId: string; findi
           <a href={rule.source} target="_blank" rel="noreferrer">{rule.reference}</a>
           <p className="faint">법률 위반 판단이 아니라 이 기준에 비춘 위험 신호예요.</p>
         </div>
-        {detail.evidenceIds?.length ? (
+        {visibleEvidenceIds(detail.evidenceIds).length ? (
           <div>
             <span className="fd-basis__label">확인 번호</span>
-            <span className="mono">{detail.evidenceIds.join(", ")}</span>
+            <span className="mono">{visibleEvidenceIds(detail.evidenceIds).join(", ")}</span>
             {detail.ruleVersion ? <p className="faint">판정 규칙 버전 {detail.ruleVersion}</p> : null}
           </div>
         ) : null}

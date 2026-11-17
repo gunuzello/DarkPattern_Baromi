@@ -8,6 +8,7 @@ import { sampleReport } from "@/lib/demo";
 import { rules } from "@/lib/labels";
 import { guide } from "@/lib/guide";
 import { PriceBars } from "@/components/landing/PriceBars";
+import { SecondaryStartButton, StartButton } from "@/components/landing/StartButtons";
 import { WaitlistForm } from "@/components/landing/WaitlistForm";
 
 const promises: { icon: IconName; title: string; body: string }[] = [
@@ -27,8 +28,8 @@ export default function Home() {
       <h1 className="t-display">주문서까지<br />대신 눌러봐요.</h1>
       <p className="story__lede">쇼핑몰 운영자를 대신해 바로미가 공개 화면부터 상품 상세, 장바구니, 주문서까지 실제 구매 흐름을 따라가고, 16가지 다크패턴 위험 신호를 근거와 함께 정리해요.</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <ButtonLink href="/scan/new" variant="brand" size="lg">무료로 점검하기</ButtonLink>
-        <ButtonLink href="/report/sample" variant="secondary" size="lg">예시 결과 보기</ButtonLink>
+        <StartButton size="lg" />
+        <SecondaryStartButton size="lg" />
       </div>
       <ul className="checklist" style={{ marginTop: 8 }}>
         <li><Icon name="check" size={16} color="var(--link)" />무료 계정을 만들고 주소만 넣으면 바로 시작해요</li>
@@ -169,7 +170,7 @@ export default function Home() {
             <h2 id="closing-title" style={{ fontSize: "clamp(40px, 5vw, 56px)", lineHeight: 1.08, letterSpacing: "-0.04em", fontWeight: 800 }}>쇼핑몰을<br />더 바르게.</h2>
             <p>주소만 넣으면 오늘 바로 첫 보고서를 받아볼 수 있어요.</p>
           </div>
-          <ButtonLink href="/scan/new" variant="brand" size="lg">무료로 점검하기</ButtonLink>
+          <StartButton size="lg" />
         </div>
       </section>
 

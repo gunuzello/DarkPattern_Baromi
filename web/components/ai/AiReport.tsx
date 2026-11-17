@@ -34,6 +34,18 @@ export function AiVerdictBadge({ verdict, large }: { verdict: AiVerdict | "INSUF
 type Filter = "all" | AiVerdict | "INSUFFICIENT" | "FAILED";
 const rank = (item: AiItemResult) => item.status === "FAILED" ? 10 : item.status === "INSUFFICIENT" ? 9 : aiVerdictOrder.indexOf(item.verdict!);
 
+/** Long captured text (often a whole screen) starts folded to three lines. */
+function EvidenceText({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 160;
+  return (
+    <span className="ai-evidence__text">
+      <span className={long && !open ? "ai-evidence__clamp" : undefined}>{text}</span>
+      {long ? <button type="button" className="auth-link" onClick={() => setOpen(!open)}>{open ? "접기" : "전체 보기"}</button> : null}
+    </span>
+  );
+}
+
 export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRechoose }: {
   report: Report;
   diagnosis: AiDiagnosis;
@@ -58,7 +70,7 @@ export function AiReport({ report, diagnosis, items, crumbs, reportHref, onRecho
       .filter((item) => item.status === "ANALYZED" && (item.verdict === "RISK" || item.verdict === "PARTIAL"))
       .map((item) => ({
         item,
-        reason: item.recommendations[0]?.reason ?? item.conclusion,
+        reason: item.conclusion,
         actions: item.recommendations.map((rec) => rec.action).filter((action) => (seen.has(action) ? false : (seen.add(action), true))),
       }))
       .filter((row) => row.actions.length);
@@ -240,7 +252,7 @@ function AiItemCard({ result, base, scanId, open, onToggle }: { result: AiItemRe
               <ul className="ai-evidence">
                 {result.evidence.map((ev, index) => (
                   <li key={index}>
-                    <span>{ev.text}</span>
+                    <EvidenceText text={ev.text} />
                     {ev.stage || (ev.evidenceId && !ev.evidenceId.includes(":")) ? <span className="ai-evidence__ref">{[ev.stage ? stageLabels[ev.stage] : "", ev.evidenceId && !ev.evidenceId.includes(":") ? `확인 번호 ${ev.evidenceId}` : ""].filter(Boolean).join(" · ")}</span> : null}
                   </li>
                 ))}

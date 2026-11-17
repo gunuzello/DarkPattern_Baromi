@@ -6,6 +6,7 @@
 import type { FindingType, Stage } from "./types";
 import { api, aiDiagnosisFetch, usesSample } from "./api";
 import * as mock from "./aiDiagnosisMock";
+import { cleanAiText } from "./evidence";
 
 /** AI's three-level verdict. "분석 자료 부족" is NOT a fourth verdict, see AiItemResult.status. */
 export type AiVerdict = "RISK" | "PARTIAL" | "SAFE";
@@ -94,13 +95,13 @@ export const aiDiagnosis = {
           type: item.ruleType,
           status: item.status === "INSUFFICIENT_DATA" ? "INSUFFICIENT" : item.status === "FAILED" ? "FAILED" : "ANALYZED",
           verdict: item.verdict === "PARTIALLY_SAFE" ? "PARTIAL" : item.verdict === "RISK" || item.verdict === "SAFE" ? item.verdict : undefined,
-          conclusion: item.status === "FAILED" ? "AI 제공자 오류로 이 항목을 분석하지 못했어요." : item.summary ?? item.reason ?? "분석 결과를 확인할 수 없어요.",
-          reasoning: item.reason ?? "",
-          limitations: item.limitations?.filter(Boolean),
+          conclusion: item.status === "FAILED" ? "AI 제공자 오류로 이 항목을 분석하지 못했어요." : cleanAiText(item.summary ?? item.reason ?? "분석 결과를 확인할 수 없어요."),
+          reasoning: cleanAiText(item.reason ?? ""),
+          limitations: item.limitations?.filter(Boolean).map(cleanAiText),
           evidence: item.evidence?.map((evidence) => ({ text: evidence.text || "수집된 구조화 근거", evidenceId: evidence.evidenceId, stage: evidence.stage })) ?? (item.observedFacts ?? []).map((text) => ({ text })),
           screenshotStages: item.screenshotStages ?? (item.screenshotStage ? [item.screenshotStage] : undefined),
           screenshotStage: item.screenshotStages?.[0] ?? item.screenshotStage,
-          recommendations: (item.recommendations ?? []).map((action) => ({ title: "개선 권고", reason: item.reason ?? "", action })),
+          recommendations: (item.recommendations ?? []).map((action) => ({ title: "개선 권고", reason: cleanAiText(item.reason ?? ""), action: cleanAiText(action) })),
         }));
         return { id: review.id, scanId, status: review.status, requestedTypes: result?.selectedRuleTypes ?? result?.pendingRuleTypes ?? items.map((item) => item.type), createdAt: review.requestedAt ?? "", completedAt: review.completedAt ?? undefined, doneCount: items.length, error: review.error ?? undefined,
           summary: items.length ? summarize(items) : undefined,

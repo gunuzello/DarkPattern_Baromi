@@ -85,13 +85,13 @@ export const collectionFailureLabels: Record<CollectionFailureCode, string> = {
 
 export function blockerText(blocker: ExplorationBlocker): string {
   const action = blocker.action === "ADD_TO_CART" ? "장바구니 담기" : blocker.action === "DIRECT_BUY" ? "바로구매" : "주문서 이동";
-  const reason = {
-    LOGIN_REQUIRED: "승인된 테스트 계정이나 로그인 세션이 없어 확인하지 못했어요.",
-    ACTION_AMBIGUOUS: `후보 ${blocker.candidateCount}개 중 하나로 확정하지 못했어요. 임의로 누르지 않았어요.`,
-    ACTION_FAILED: "누른 뒤 화면 상태가 바뀌는 것을 확인하지 못했어요.",
-    ACTION_NOT_FOUND: "버튼을 찾지 못했어요.",
+  const where = `${stageLabels[blocker.stage]}에서 ${action}`;
+  return {
+    LOGIN_REQUIRED: `${where} 화면은 로그인이 필요해요. 승인된 테스트 계정이나 로그인 세션이 없어 확인하지 못했어요.`,
+    ACTION_AMBIGUOUS: `${where} 버튼 후보가 ${blocker.candidateCount}개라 하나로 정하지 못했어요. 임의로 누르지 않았어요.`,
+    ACTION_FAILED: `${where} 버튼을 눌렀지만 화면이 바뀌는 것을 확인하지 못했어요.`,
+    ACTION_NOT_FOUND: `${where} 버튼을 찾지 못했어요.`,
   }[blocker.code];
-  return `${stageLabels[blocker.stage]}에서 ${action} 경로를 ${reason}`;
 }
 
 export const operatorLabelOptions = [
