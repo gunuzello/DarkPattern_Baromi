@@ -1,6 +1,6 @@
 # 바로미 웹 (web/)
 
-바로미 서비스 화면을 Next.js(React) + TypeScript로 구현한 **Vercel 배포용 프론트엔드**입니다. 저장소 루트의 Next 앱(백엔드 공개 API, 진단 엔진)과 분리돼 있고, 데이터는 `/api/v1` 공개 API만 씁니다.
+바로미 서비스 화면을 Next.js(React) + TypeScript로 구현한 **Vercel 배포용 프론트엔드**입니다. 저장소 루트의 API·진단 엔진과 분리돼 있으며, 데이터는 `/api/v1` API를 통해 주고받습니다. 현재 프론트 주소는 [baromi-web-coral.vercel.app](https://baromi-web-coral.vercel.app)입니다.
 
 - 디자인 시스템: "Ledger"(`app/globals.css`, `components/ui/`) 기반
 - 정보 구조(서비스 소개, 분석 방법, 탐지 기준, 안전 원칙, 로그인)와 보고서 레이아웃(문서 캔버스 + 오른쪽 작업 사이드바): `feature/redesign` 브랜치에서 가져와 Ledger 스타일로 다시 구현
@@ -47,16 +47,13 @@ npm run dev
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 브라우저에 사용해도 되는 Supabase publishable/anon key. 비밀키는 넣지 않습니다. |
 | `NEXT_PUBLIC_DEMO_MODE` | `true`이면 모든 화면이 `lib/demo.ts`의 예시 데이터를 씁니다. Vercel 미리보기용입니다. |
 
-## Vercel 배포
+## 운영 배포 구성
 
-1. Vercel에서 **Add New › Project**로 `DarkPattern_Baromi` 저장소를 가져옵니다.
-2. **Root Directory를 `web`으로 지정**합니다. 프레임워크는 Next.js로 자동 인식됩니다. (루트는 백엔드 앱이라 Vercel에서 돌지 않습니다.)
-3. **Settings › Environment Variables**에 `BAROMI_API_ORIGIN`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`를 넣습니다. 인증 API 서버의 `BAROMI_WEB_ORIGINS`에도 이 프론트 도메인을 등록합니다. 미리보기에서만 `NEXT_PUBLIC_DEMO_MODE=true`를 사용합니다.
-4. 배포합니다.
+프론트엔드는 Vercel에서 제공하고, 현재 API 주소는 `https://baromi-api-zby54gcwwq-du.a.run.app`입니다. 진단 API와 Chromium 작업기는 Cloud Run의 `baromi-api` 서비스와 요청 시 실행되는 `baromi-scan-worker` Job으로 운영합니다. 진단 요청이 없을 때 브라우저 작업기를 계속 켜 두지 않습니다.
 
-### 백엔드는 Vercel 밖에서 운영해야 합니다
+Vercel 프로젝트의 Root Directory는 `web`으로 설정합니다. 환경변수에는 `BAROMI_API_ORIGIN`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`를 둡니다. 인증 API의 `BAROMI_WEB_ORIGINS`에도 프론트 도메인을 허용해야 합니다. 미리보기에서만 `NEXT_PUBLIC_DEMO_MODE=true`를 사용합니다.
 
-진단 엔진(Playwright 작업기, SQLite 또는 PostgreSQL, 증거 이미지 저장소)은 장시간 브라우저를 띄우고 파일을 저장하기 때문에 Vercel 서버리스에서 돌릴 수 없습니다. DarkPatternPrevent를 Docker가 되는 서버(예: `docker-compose.spring.yml` 구성)에 올리고, 그 주소를 `BAROMI_API_ORIGIN`으로 지정하세요. 백엔드의 `npm run worker`도 함께 실행되어야 진단이 진행됩니다.
+AI 꼼꼼 점검은 화면과 요금 안내에서는 유료 후속 기능으로 소개하지만, 현재 시연 기간에는 로그인한 모든 계정이 요청할 수 있습니다. 계정 로그인과 사용자별 쇼핑몰·진단 이력 보호는 그대로 적용됩니다.
 
 ## 사용하는 API (백엔드 명세 v1, 9절의 공개 API만)
 
@@ -74,7 +71,7 @@ npm run dev
 ### 명세에 맞춘 처리
 
 - **세션 만료:** 진단 진행, 보고서, 진단 이력에서 `404`(또는 `401`)를 받으면 `/scan/new?expired=1`로 돌아가 안내를 보여줍니다. `/report/sample`은 예외입니다.
-- **오류 코드:** `503`은 저장소나 작업기 장애, `429`는 호출 제한, `409`는 상태 충돌(진행 중인 진단 삭제 등)로 구분해 안내합니다. 그 밖에는 서버가 준 `error` 문구를 그대로 보여줍니다.
+- **오류 코드:** `503`은 저장소·작업기 상태 또는 오래된 실행 기록에 따른 API 상태 저하, `429`는 호출 제한, `409`는 상태 충돌(진행 중인 진단 삭제 등)을 나타낼 수 있습니다. 그 밖에는 서버가 준 `error` 문구를 그대로 보여줍니다.
 - **중복 진단:** `POST /scans`가 `deduplicated: true`를 주면 진행 중인 기존 진단으로 이동하고 그 사실을 알려줍니다.
 - **진단 중단:** 대기 중이던 진단은 `CANCELLED`로 바로 끝나고, 진행 중이면 `cancelRequested`로 "중단 요청 처리 중"을 보여줍니다.
 - **상태 정규화 (`lib/normalize.ts`):** 소문자 상태나 `succeeded`가 와도 대문자 상태로 바꿉니다. 별도 탐색 영역 키는 명세 예시의 `SEARCH`, `LOGIN`과 Node API의 `CATALOG`, `AUTH`를 같은 일곱 영역으로 묶습니다. 같은 영역에 값이 여러 개면 더 많이 진행된 상태를 씁니다.
