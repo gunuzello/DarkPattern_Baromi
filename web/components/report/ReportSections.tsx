@@ -22,7 +22,7 @@ export function FlowTrack({ report }: { report: Report }) {
   return (
     <section aria-labelledby="flow-head" className="rpt-section">
       <div className="rpt-section__head">
-        <h2 id="flow-head" className="rpt-section__title">구매 흐름과 단계별 관찰</h2>
+        <h2 id="flow-head" className="rpt-section__title">구매 흐름과 단계별 기록</h2>
         <span className="faint" style={{ fontSize: 13 }}>별도 브라우저 세션에서 진행</span>
       </div>
       <ol className="rpt-flow">
@@ -114,8 +114,8 @@ export function CoverageTable({ report }: { report: Report }) {
   return (
     <section aria-labelledby="coverage-head" className="rpt-section">
       <div className="rpt-section__head">
-        <h2 id="coverage-head" className="rpt-section__title">검사 범위</h2>
-        <span className="faint tnum" style={{ fontSize: 13 }}>{rows.length}곳 중 검사 완료 {rows.filter((row) => row.phase.status === "COVERED").length}곳</span>
+        <h2 id="coverage-head" className="rpt-section__title">점검 범위</h2>
+        <span className="faint tnum" style={{ fontSize: 13 }}>{rows.length}곳 중 점검 완료 {rows.filter((row) => row.phase.status === "COVERED").length}곳</span>
       </div>
       <div className="table-wrap">
         <table className="rpt-table">

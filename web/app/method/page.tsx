@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DocBlock, SitePage } from "@/components/site/SiteChrome";
+import { Icon } from "@/components/ui/Icon";
 import { surfaceLabels } from "@/lib/labels";
 import { surfaceKinds } from "@/lib/types";
 
@@ -42,8 +43,17 @@ export default function MethodPage() {
           <div><dt>미검사 · 점검 못 했어요</dt><dd>범위에 도달하지 못했거나 차단돼 판단할 수 없어요. 이유를 함께 보여드려요.</dd></div>
         </dl>
       </DocBlock>
+      <DocBlock kicker="06" title="AI 정밀 점검 (선택)">
+        <p className="muted">기본 결과가 나온 뒤, 운영자가 16가지 중 더 살펴볼 항목을 직접 골라 요청할 때만 실행해요. 기본 점검은 AI 없이 끝나요.</p>
+        <ul className="checklist" style={{ color: "var(--ink)" }}>
+          <li><Icon name="check" size={16} color="var(--link)" />고른 항목에 연결된 근거와, 입력란을 가린 기존 캡처만 보내요.</li>
+          <li><Icon name="check" size={16} color="var(--link)" />AI는 위험, 부분적 안전, 안전으로 판단하고, 근거가 부족하면 ‘분석 자료 부족’으로 남겨요.</li>
+          <li><Icon name="check" size={16} color="var(--link)" />AI가 인용한 근거만 결과에 연결하고, 기본 점검 결과는 덮어쓰지 않아요.</li>
+        </ul>
+        <p className="faint" style={{ fontSize: 14 }}>판매 이력, 실제 재고, 광고 계약처럼 화면 밖의 사실은 AI도 추정으로 확정하지 않아요.</p>
+      </DocBlock>
       <DocBlock title="검증 현황 공개">
-        <p className="muted">지금은 로컬에서 점검 시작부터 16가지 유형 보고서 열람·다운로드까지 한 번에 경험하는 것을 목표로 검증하고 있어요. 승인된 쇼핑몰 반복 실행, 여러 쇼핑몰 호환성, 소형 쇼핑몰 30초 목표가 입증되기 전에는 완성이라고 표시하지 않아요.</p>
+        <p className="muted">지금은 팀이 만든 테스트몰과 승인된 쇼핑몰에서 파일럿으로 검증하고 있어요. 전체 구매 흐름 점검은 보통 5분 안팎 걸리고, 쇼핑몰 구조에 따라 달라져요. 여러 쇼핑몰에서의 도달률과 정확도가 확인되기 전에는 완성이라고 표시하지 않아요.</p>
       </DocBlock>
     </SitePage>
   );

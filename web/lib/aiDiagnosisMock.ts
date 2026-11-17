@@ -10,7 +10,7 @@ import { guide } from "./guide";
 import type { FindingType, Report } from "./types";
 import { reportItems, type ReportItem } from "@/components/report/model";
 
-type Stored = { id: string; startedAt: number; requestedTypes: FindingType[] };
+type Stored = { id: string; startedAt: number; requestedTypes: FindingType[]; cancelledAt?: number };
 const key = (scanId: string) => `baromi-ai-diagnosis:${scanId}`;
 const QUEUE_MS = 2000;
 const PER_ITEM_MS = 900;
@@ -95,6 +95,7 @@ async function compose(scanId: string, stored: Stored): Promise<AiDiagnosis> {
   const elapsed = Date.now() - stored.startedAt;
   const total = stored.requestedTypes.length;
   const base = { id: stored.id, scanId, requestedTypes: stored.requestedTypes, createdAt: new Date(stored.startedAt).toISOString(), items: [] };
+  if (stored.cancelledAt) return { ...base, status: "CANCELLED", doneCount: Math.min(total, Math.max(0, Math.floor((stored.cancelledAt - stored.startedAt - QUEUE_MS) / PER_ITEM_MS))) };
   if (elapsed < QUEUE_MS) return { ...base, status: "QUEUED", doneCount: 0 };
   const doneCount = Math.min(total, Math.floor((elapsed - QUEUE_MS) / PER_ITEM_MS));
   if (doneCount < total) return { ...base, status: "RUNNING", doneCount };
@@ -139,7 +140,11 @@ export async function requestDiagnosis(scanId: string, types: FindingType[]): Pr
   return compose(scanId, stored);
 }
 
+/** Keep the request but mark it stopped, so the page can say it was cancelled. */
 export async function cancelDiagnosis(scanId: string): Promise<void> {
-  memory.delete(scanId);
-  try { window.sessionStorage.removeItem(key(scanId)); } catch { /* ignore unavailable storage */ }
+  const stored = read(scanId);
+  if (!stored) return;
+  const next = { ...stored, cancelledAt: Date.now() };
+  memory.set(scanId, next);
+  try { window.sessionStorage.setItem(key(scanId), JSON.stringify(next)); } catch { /* the in-memory copy still works */ }
 }

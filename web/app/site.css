@@ -14,7 +14,9 @@
 .site-menu-btn {
   display: none;
 }
-.site-menu {
+/* .lp-header nav is hidden on phones; the opened mobile menu must still show */
+.site-menu,
+.lp-header .site-menu {
   display: flex;
   flex-direction: column;
   padding: 8px 20px 16px;

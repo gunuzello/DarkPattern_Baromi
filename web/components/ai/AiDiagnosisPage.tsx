@@ -57,13 +57,6 @@ export function AiDiagnosisPage({ id }: { id: string }) {
     return () => window.clearTimeout(timer);
   }, [diagnosis, id]);
 
-  if (mode === "legacy") {
-    return (
-      <Alert kind="brand" title="AI 정밀 점검은 곧 열려요" actions={<ButtonLink variant="secondary" size="sm" href={reportHref}>점검 결과로 돌아가기</ButtonLink>}>
-        지금은 점검 결과의 ‘확인해 보세요’ 항목을 AI가 함께 보는 AI 정밀 점검을 이용할 수 있어요.
-      </Alert>
-    );
-  }
   if (!report || diagnosis === undefined) {
     return error
       ? <Alert kind="error" title={error} actions={<ButtonLink variant="secondary" size="sm" href={reportHref}>점검 결과로 돌아가기</ButtonLink>} />

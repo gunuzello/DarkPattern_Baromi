@@ -33,7 +33,7 @@ export default function PrinciplesPage() {
           <li><Icon name="check" size={16} color="var(--link)" />테스트 계정은 동적 점검 요청에만 쓰고 서버에서 암호화해요.</li>
           <li><Icon name="check" size={16} color="var(--link)" />비밀번호, 세션 쿠키, 개인정보는 보고서·로그·샘플 데이터에 남기지 않아요.</li>
           <li><Icon name="check" size={16} color="var(--link)" />스크린샷의 비밀번호·이메일·전화·주소 입력란은 가려요.</li>
-          <li><Icon name="check" size={16} color="var(--link)" />AI 검토에는 계정 정보나 무관한 HTML을 보내지 않고 정리된 후보만 보내요.</li>
+          <li><Icon name="check" size={16} color="var(--link)" />AI 정밀 점검에는 고른 항목의 근거와 입력란을 가린 캡처만 보내요. 계정 정보와 무관한 HTML은 보내지 않아요.</li>
         </ul>
         <p className="faint" style={{ fontSize: 14 }}>입력란 마스킹은 화면에 평문으로 나온 개인정보까지 완벽히 지운다고 보장하지 않아요. 운영자가 만든 전용 테스트 계정을 써 주세요.</p>
       </DocBlock>

@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/Icon";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { useBackToLogin } from "@/lib/session";
+import { copyText } from "@/lib/clipboard";
 import { surfaceKinds, type PurchasePath, type Verification, type Viewport } from "@/lib/types";
 import { surfaceLabels } from "@/lib/labels";
 import { pathLabel, viewportLabel } from "@/lib/format";
@@ -222,7 +223,7 @@ export function ScanForm() {
             <p className="muted" style={{ fontSize: 14 }}>{methodText[method].hint}</p>
             <div className="code-copy">
               <code>{code}</code>
-              <button type="button" className="btn btn--secondary btn--md" onClick={() => { void navigator.clipboard?.writeText(method === "file" ? verification.token : code); toast.show("확인 코드를 복사했어요"); }}>복사</button>
+              <button type="button" className="btn btn--secondary btn--md" onClick={async () => { toast.show(await copyText(method === "file" ? verification.token : code) ? "확인 코드를 복사했어요" : "복사하지 못했어요. 코드를 직접 선택해 복사해 주세요."); }}>복사</button>
             </div>
             {method === "file" ? <p className="faint" style={{ fontSize: 13 }}>파일 내용: <code>{verification.token}</code></p> : null}
             {error ? <Alert kind="error" title="소유 확인에 실패했어요">{error}</Alert> : null}
