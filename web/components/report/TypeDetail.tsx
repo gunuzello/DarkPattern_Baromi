@@ -10,6 +10,7 @@ import { guide } from "@/lib/guide";
 import { ruleSurface, stageLabels } from "@/lib/labels";
 import type { Finding, FindingType, Report } from "@/lib/types";
 import { EvidenceShot } from "./EvidenceShot";
+import { visibleEvidenceIds } from "@/lib/evidence";
 import Link from "next/link";
 import { AiVerdictBadge } from "@/components/ai/AiReport";
 import type { AiItemResult } from "@/lib/aiDiagnosis";
@@ -69,7 +70,7 @@ export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onReq
   const finding = item.findings[0];
   const reportHref = `/report/${encodeURIComponent(report.scanId)}`;
   const tag = finding ? comparisonTag(report, finding) : null;
-  const ids = [...new Set([...item.evidenceIds, ...item.findings.flatMap((f) => f.evidenceIds ?? [])])];
+  const ids = visibleEvidenceIds([...item.evidenceIds, ...item.findings.flatMap((f) => f.evidenceIds ?? [])]);
 
   const evidence = (
     <>
@@ -82,7 +83,7 @@ export function TypeDetail({ report, item, linesFor, aiBusy, canRequestAi, onReq
                 <tr key={stage.stage} className={finding?.stage === stage.stage ? "is-hit" : undefined}>
                   <td>{stageLabels[stage.stage]}</td>
                   <td className="tnum">{stage.displayedLines.join(" · ") || "—"}</td>
-                  <td className="mono">{stage.evidence?.id ?? "—"}</td>
+                  <td className="mono">{visibleEvidenceIds([stage.evidence?.id])[0] ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

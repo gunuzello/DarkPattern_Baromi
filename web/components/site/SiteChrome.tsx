@@ -7,6 +7,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { AccountControls } from "@/components/auth/AccountControls";
+import { StartButton } from "@/components/landing/StartButtons";
 
 /** Information architecture taken from feature/redesign; visuals follow the "Ledger" system. */
 export const siteNav = [
@@ -40,7 +41,7 @@ export function SiteHeader() {
         <div className="lp-header__cta">
           <span className="site-hide-sm"><AccountControls /></span>
           <ButtonLink href="/report/sample" variant="secondary" className="site-hide-sm">예시 결과</ButtonLink>
-          <ButtonLink href="/scan/new" variant="brand">무료로 점검하기</ButtonLink>
+          <StartButton />
           <button
             type="button"
             className="btn btn--tertiary btn--md site-menu-btn"
@@ -106,7 +107,7 @@ export function SitePage({ eyebrow, title, lede, children }: { eyebrow?: string;
               <h2 style={{ fontSize: "clamp(32px, 4vw, 44px)", lineHeight: 1.1, letterSpacing: "-0.035em", fontWeight: 800 }}>배포하기 전에<br />한 번 먼저 점검하세요.</h2>
               <p>주소만 넣으면 공개 화면 점검부터 바로 시작할 수 있어요.</p>
             </div>
-            <ButtonLink href="/scan/new" variant="brand" size="lg">무료로 점검하기</ButtonLink>
+            <StartButton size="lg" />
           </div>
         </section>
       </main>

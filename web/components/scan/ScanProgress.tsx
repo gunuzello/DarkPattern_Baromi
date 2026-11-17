@@ -152,7 +152,7 @@ export function ScanProgress({ id }: { id: string }) {
     <>
       <PageHead
         title={stopping ? "중단 요청을 처리하고 있어요" : titles[scan.status]}
-        crumbs={[{ label: "내 쇼핑몰", href: "/shops" }, { label: shopName === "쇼핑몰" ? "점검 기록" : shopName, href: `/shop/${encodeURIComponent(scan.shopId)}` }, { label: `${viewportLabel(scan.viewport)}, ${pathLabel(scan.purchasePath)}` }]}
+        crumbs={[{ label: "내 쇼핑몰", href: "/shops" }, { label: shopName || "점검 기록", href: `/shop/${encodeURIComponent(scan.shopId)}` }, { label: `${viewportLabel(scan.viewport)}, ${pathLabel(scan.purchasePath)}` }]}
         meta={<><ScanStatusBadge status={scan.status} label={stopping ? "중단 요청 처리 중" : undefined} /><span>{staticMode ? "공개 화면 점검" : "전체 구매 흐름 점검"}</span></>}
         actions={<>
           {active ? <Button variant="secondary" onClick={() => setConfirm(true)} disabled={pending || scan.cancelRequested}>점검 중단</Button> : null}

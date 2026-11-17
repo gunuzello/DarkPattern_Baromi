@@ -114,8 +114,10 @@ export function ShopList() {
                 <Icon name="chevron" size={16} color="var(--ink-3)" />
               </Link>
               <div className="shop-card__foot">
-                <ButtonLink variant="secondary" size="sm" href={`/shop/${encodeURIComponent(shop.shopId)}`}>점검 기록 보기</ButtonLink>
-                <Button variant="tertiary" size="sm" onClick={() => { setEditingId(shop.shopId); setNicknameDraft(shop.nickname ?? ""); setRenameError(""); }}>이름 수정</Button>
+                <span className="shop-card__actions">
+                  <ButtonLink variant="secondary" size="sm" href={`/shop/${encodeURIComponent(shop.shopId)}`}>점검 기록 보기</ButtonLink>
+                  <Button variant="tertiary" size="sm" onClick={() => { setEditingId(shop.shopId); setNicknameDraft(shop.nickname ?? ""); setRenameError(""); }}>이름 수정</Button>
+                </span>
                 <Button variant="tertiary" size="sm" onClick={() => { setRemoveError(""); setRemoving(shop); }} aria-label={`${hostOf(shop.url)} 삭제`}>삭제</Button>
               </div>
               {editingId === shop.shopId ? (

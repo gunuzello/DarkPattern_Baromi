@@ -1,5 +1,6 @@
 "use client";
 
+import { visibleEvidenceIds } from "@/lib/evidence";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -33,7 +34,7 @@ export function ReviewCandidates({ scanId, candidates }: { scanId: string; candi
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span className="t-caption">{candidate.stage === "surface" ? "별도 탐색 영역" : stageLabels[candidate.stage]}</span>
             <span style={{ fontSize: 16, fontWeight: 700 }}>“{candidate.text}”</span>
-            <span className="muted" style={{ fontSize: 14 }}>{candidate.reason} <span className="mono faint">{candidate.evidenceIds.join(", ")}</span></span>
+            <span className="muted" style={{ fontSize: 14 }}>{candidate.reason} <span className="mono faint">{visibleEvidenceIds(candidate.evidenceIds).join(", ")}</span></span>
           </div>
           <div className="field">
             <label htmlFor={`label-${candidate.id}`} style={{ fontSize: 13, fontWeight: 600 }}>운영자 라벨</label>

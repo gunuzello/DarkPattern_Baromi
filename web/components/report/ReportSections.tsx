@@ -1,4 +1,5 @@
 import { Mark } from "@/components/ui/Status";
+import { visibleEvidenceIds } from "@/lib/evidence";
 import { stageLabels, surfaceLabels } from "@/lib/labels";
 import { formatDuration } from "@/lib/format";
 import { phaseFor, phaseStatusLabels, phaseTone, surfacePhase, type PhaseTone } from "@/lib/phases";
@@ -93,7 +94,7 @@ export function LedgerTable({ report }: { report: Report }) {
                       <span className={`rpt-verify rpt-verify--${row.verification.toLowerCase()}`}>{verificationText[row.verification]}</span>
                       {row.networkValues?.length ? <span className="faint tnum" style={{ display: "block", fontSize: 12 }}>응답 {row.networkValues.length}건 중 {row.networkValues.filter((v) => v.matchedScreen).length}건 일치</span> : null}
                     </td>
-                    <td className="mono faint" style={{ fontSize: 12 }}>{row.evidence?.id ?? `page:${row.stage}`}</td>
+                    <td className="mono faint" style={{ fontSize: 12 }}>{visibleEvidenceIds([row.evidence?.id])[0] ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
