@@ -79,14 +79,14 @@ function resultFor(report: Report, item: ReportItem): AiItemResult {
   }[verdict];
   const reasoning = {
     RISK: `${g.criteria.replace(/‘[^’]+’로 (판단해요|남겨요)./, "위험으로 볼 수 있어요.")} 수집한 근거가 이 조건에 그대로 맞아요.`,
-    PARTIAL: `표시는 확인했지만 이를 뒷받침할 근거가 화면에 없어요. ${g.limit} 그래서 ‘위험’이 아니라 ‘부분적 안전’으로 판단했어요.`,
-    SAFE: `기준에 해당하는 신호를 찾지 못했어요. 다만 ${g.limit}`,
+    PARTIAL: "표시는 확인했지만 이를 뒷받침할 근거가 화면에 없어요. 그래서 ‘위험’이 아니라 ‘부분적 안전’으로 판단했어요.",
+    SAFE: "살펴본 화면에서 기준에 해당하는 신호를 찾지 못했어요.",
   }[verdict];
   const recommendations = verdict === "SAFE"
     ? [{ title: "현재 상태 유지", reason: "문제가 될 만한 표시가 없었어요.", action: "지금처럼 유지하고, 이 화면을 바꿀 때 다시 점검해 보세요." }]
     : g.fixes.map((action) => ({ title: g.plain, reason: item.summary, action }));
   return {
-    type: item.type, status: "ANALYZED", verdict, conclusion, evidence, reasoning, recommendations,
+    type: item.type, status: "ANALYZED", verdict, conclusion, evidence, reasoning, recommendations, limitations: [g.limit],
     screenshotStage: finding && visual.includes(item.type) ? finding.stage : undefined,
   };
 }

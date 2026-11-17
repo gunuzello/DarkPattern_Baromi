@@ -157,6 +157,8 @@ export type AiReview = {
   status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
   model?: string | null;
   candidateCount: number;
+  requestedAt?: string | null;
+  completedAt?: string | null;
   durationMs?: number | null;
   error?: string | null;
   result?: {

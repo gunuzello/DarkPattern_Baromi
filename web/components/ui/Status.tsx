@@ -4,7 +4,7 @@ import { scanStatusLabels } from "@/lib/labels";
 
 /** Result of one of the 16 checks. Shape + label, never color alone. */
 export type ResultKind = "risk" | "review" | "clear" | "none";
-export const resultLabels: Record<ResultKind, string> = { risk: "위험", review: "검토 필요", clear: "안전", none: "미검사" };
+export const resultLabels: Record<ResultKind, string> = { risk: "위험", review: "검토 필요", clear: "미관찰", none: "미검사" };
 /** Plain wording for shop owners (report wireframe): what the result asks them to do. */
 export const plainLabels: Record<ResultKind, string> = { risk: "고쳐야 해요", review: "확인해 보세요", clear: "괜찮아요", none: "점검 못 했어요" };
 

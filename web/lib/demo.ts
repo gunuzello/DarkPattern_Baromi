@@ -32,11 +32,35 @@ function save(all: Record<string, Stored>) {
 
 export const ok = async () => ({ ok: true });
 
-export async function createShop(url: string): Promise<CreateShopResponse> {
+/** Shop names chosen in the demo, kept for this browser session. */
+const NAMES_KEY = "baromi-demo-shop-names";
+const defaultNames: Record<string, string> = { "demo-shop": "린넨하우스", "demo-shop-2": "오크테이블" };
+function shopNames(): Record<string, string> {
+  if (typeof window === "undefined") return defaultNames;
+  try {
+    return { ...defaultNames, ...JSON.parse(window.sessionStorage.getItem(NAMES_KEY) ?? "{}") };
+  } catch {
+    return defaultNames;
+  }
+}
+
+export async function renameShop(shopId: string, nickname: string): Promise<Shop> {
+  await wait(250);
+  try {
+    window.sessionStorage.setItem(NAMES_KEY, JSON.stringify({ ...shopNames(), [shopId]: nickname }));
+  } catch {
+    /* storage unavailable: the name still shows until reload */
+  }
+  return { id: shopId, url: shopId === "demo-shop-2" ? "https://oak-table.co.kr" : "https://linen-house.cafe24.com", nickname };
+}
+
+export async function createShop(url: string, nickname?: string): Promise<CreateShopResponse> {
   await wait(500);
+  if (nickname?.trim()) await renameShop("demo-shop", nickname.trim());
   return {
     shopId: "demo-shop",
     url,
+    nickname: nickname?.trim() || shopNames()["demo-shop"],
     verification: {
       name: "baromi-site-verification",
       token: "brm_7f3k9q2x",
@@ -76,8 +100,8 @@ export async function listShops() {
   return {
     limit: 50,
     shops: [
-      { shopId: "demo-shop", url: "https://linen-house.cafe24.com" },
-      { shopId: "demo-shop-2", url: "https://oak-table.co.kr" },
+      { shopId: "demo-shop", url: "https://linen-house.cafe24.com", nickname: shopNames()["demo-shop"] },
+      { shopId: "demo-shop-2", url: "https://oak-table.co.kr", nickname: shopNames()["demo-shop-2"] },
     ],
   };
 }
@@ -306,7 +330,7 @@ export async function getFinding(findingId: string): Promise<FindingDetail> {
 
 export async function getShop(shopId: string): Promise<Shop> {
   await wait(200);
-  return { id: shopId, url: "https://linen-house.cafe24.com", consentAt: "2026-11-05T13:39:00+09:00", verifiedAt: "2026-11-05T13:40:00+09:00" };
+  return { id: shopId, url: shopId === "demo-shop-2" ? "https://oak-table.co.kr" : "https://linen-house.cafe24.com", nickname: shopNames()[shopId], consentAt: "2026-11-05T13:39:00+09:00", verifiedAt: "2026-11-05T13:40:00+09:00" };
 }
 
 export async function getShopScans(): Promise<HistoryItem[]> {

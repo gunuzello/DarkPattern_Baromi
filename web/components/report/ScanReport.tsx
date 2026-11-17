@@ -23,6 +23,7 @@ import { TypeDetail } from "./TypeDetail";
 import { TypeList, type ListFilter } from "./TypeList";
 import { guide } from "@/lib/guide";
 import { useRescan } from "@/components/scan/useRescan";
+import { useShopName } from "./useShopName";
 
 const scanStateLabel: Record<Report["scanStatus"], string> = {
   QUEUED: "점검 대기", RUNNING: "점검 중", COMPLETED: "점검 완료", PARTIAL: "일부만 점검", FAILED: "점검 실패", CANCELLED: "점검 중단",
@@ -86,6 +87,7 @@ export function ScanReport({ id }: { id: string }) {
 
   const sample = usesSample(id);
   const publicSample = sample && !isDemo;
+  const shopName = useShopName(report?.shopId, report?.targetUrl, !publicSample);
 
   function saveFile(blob: Blob) {
     const url = URL.createObjectURL(blob);
@@ -209,7 +211,7 @@ export function ScanReport({ id }: { id: string }) {
             <>
               <Link href="/shops">내 쇼핑몰</Link><Icon name="chevron" size={12} color="#a0a4ab" />
               <Link href={`/shop/${encodeURIComponent(report.shopId)}`}>점검 기록</Link><Icon name="chevron" size={12} color="#a0a4ab" />
-              <span>{hostOf(report.targetUrl)}</span>
+              <span>{shopName}</span>
             </>
           )}
         </nav>
@@ -409,7 +411,7 @@ export function ScanReport({ id }: { id: string }) {
       </details>
 
       <p className="rv-disclaimer">
-        결과는 법률 판단이 아니라 공정위 가이드라인 기준의 위험 신호예요. ‘괜찮아요(안전)’는 점검한 범위에서 신호가 없었다는 뜻이며 적법함을 보증하지 않아요.
+        결과는 법률 판단이 아니라 공정위 가이드라인 기준의 위험 신호예요. ‘괜찮아요(미관찰)’는 점검한 범위에서 신호가 없었다는 뜻이며 적법함을 보증하지 않아요.
         {publicSample ? " 이 결과는 실제 쇼핑몰이 아닌 예시 데이터로 만들었어요." : ""}
       </p>
 

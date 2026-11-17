@@ -3404,3 +3404,11 @@ a:has(> .logo),
     padding-left: 0 !important;
   }
 }
+.ai-limits {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ink-3);
+}

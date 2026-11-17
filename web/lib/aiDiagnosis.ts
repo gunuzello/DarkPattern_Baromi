@@ -30,6 +30,8 @@ export type AiItemResult = {
   screenshotStage?: Stage;
   screenshotStages?: Stage[];
   reasoning: string;
+  /** What this analysis could not confirm (spec §7.1: stored and shown per item). */
+  limitations?: string[];
   recommendations: AiRecommendation[];
 };
 
@@ -64,6 +66,21 @@ export const aiVerdictOrder: AiVerdict[] = ["RISK", "PARTIAL", "SAFE"];
 
 const apiRequest = aiDiagnosisFetch;
 
+/** AI 종합 의견 in the same words as the verdicts (spec §8.4: main risks, what to fix first). */
+export function summarize(items: AiItemResult[]): NonNullable<AiDiagnosis["summary"]> {
+  const analyzed = items.filter((item) => item.status === "ANALYZED");
+  const count = (verdict: AiVerdict) => analyzed.filter((item) => item.verdict === verdict).length;
+  const insufficient = items.filter((item) => item.status === "INSUFFICIENT").length;
+  const failed = items.filter((item) => item.status === "FAILED").length;
+  const notes = [insufficient ? `${insufficient}개는 분석 자료가 부족해 판정하지 않았어요.` : "", failed ? `${failed}개는 AI 요청에 실패했어요.` : ""].filter(Boolean).join(" ");
+  const ordered = [...analyzed.filter((item) => item.verdict === "RISK"), ...analyzed.filter((item) => item.verdict === "PARTIAL")];
+  return {
+    overview: `선택한 ${items.length}개 항목 중 위험 ${count("RISK")}개, 부분적 안전 ${count("PARTIAL")}개, 안전 ${count("SAFE")}개로 판단했어요.${notes ? ` ${notes}` : ""}`,
+    keyRisks: analyzed.filter((item) => item.verdict === "RISK").map((item) => item.conclusion),
+    priorities: ordered.map((item) => item.recommendations[0]?.action).filter((action): action is string => Boolean(action)).slice(0, 3),
+  };
+}
+
 export const aiDiagnosis = {
   /** Latest AI 정밀 점검 for a scan, or null when none was requested. */
   get: (scanId: string): Promise<AiDiagnosis | null> =>
@@ -79,14 +96,15 @@ export const aiDiagnosis = {
           status: item.status === "INSUFFICIENT_DATA" ? "INSUFFICIENT" : item.status === "FAILED" ? "FAILED" : "ANALYZED",
           verdict: item.verdict === "PARTIALLY_SAFE" ? "PARTIAL" : item.verdict === "RISK" || item.verdict === "SAFE" ? item.verdict : undefined,
           conclusion: item.status === "FAILED" ? "AI 제공자 오류로 이 항목을 분석하지 못했어요." : item.summary ?? item.reason ?? "분석 결과를 확인할 수 없어요.",
-          reasoning: item.reason ?? item.limitations?.join(" ") ?? "",
+          reasoning: item.reason ?? "",
+          limitations: item.limitations?.filter(Boolean),
           evidence: item.evidence?.map((evidence) => ({ text: evidence.text || "수집된 구조화 근거", evidenceId: evidence.evidenceId, stage: evidence.stage })) ?? (item.observedFacts ?? []).map((text) => ({ text })),
           screenshotStages: item.screenshotStages ?? (item.screenshotStage ? [item.screenshotStage] : undefined),
           screenshotStage: item.screenshotStages?.[0] ?? item.screenshotStage,
           recommendations: (item.recommendations ?? []).map((action) => ({ title: "개선 권고", reason: item.reason ?? "", action })),
         }));
-        return { id: review.id, scanId, status: review.status, requestedTypes: result?.selectedRuleTypes ?? result?.pendingRuleTypes ?? items.map((item) => item.type), createdAt: "", completedAt: undefined, doneCount: items.length, error: review.error ?? undefined,
-          summary: result?.summary ? { overview: `안전 ${result.summary.safe ?? 0}개, 부분 개선 ${result.summary.partiallySafe ?? 0}개, 위험 ${result.summary.risk ?? 0}개`, keyRisks: items.filter((item) => item.verdict === "RISK").map((item) => item.conclusion), priorities: items.flatMap((item) => item.recommendations.map((rec) => rec.action)).slice(0, 8) } : undefined,
+        return { id: review.id, scanId, status: review.status, requestedTypes: result?.selectedRuleTypes ?? result?.pendingRuleTypes ?? items.map((item) => item.type), createdAt: review.requestedAt ?? "", completedAt: review.completedAt ?? undefined, doneCount: items.length, error: review.error ?? undefined,
+          summary: items.length ? summarize(items) : undefined,
           items };
       })(),
   request: (scanId: string, types: FindingType[]): Promise<AiDiagnosis> =>
